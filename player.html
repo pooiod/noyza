@@ -1,93 +1,115 @@
 <style>
-@font-face {
-  font-family: 'Sono-MONO';
-  src: url('/Sono-MONO.ttf') format('truetype');
-}
-.player {
-  background: #4a4a4a;
-  padding: 20px;
-  display: flex;
-  gap: 30px;
-  width: 100%;
-  height: 85px;
-  align-items: center;
-  min-width: 300px;
-  box-sizing: border-box;
-}
-.main-content {
-  display: flex;
-  flex-direction: column;
-  flex-grow: 1;
-  gap: 20px;
-  min-width: 0;
-}
-.controls {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-  width: 100%;
-  min-width: 0;
-}
-.controls img {
-  width: 24px;
-  height: 24px;
-  cursor: pointer;
-  flex-shrink: 0;
-  filter: brightness(0) invert(1);
-}
-.title {
-  color: #fff;
-  font-family: 'Sono-MONO', monospace;
-  letter-spacing: 8px;
-  font-size: 20px;
-  flex-grow: 1;
-  text-align: center;
-  user-select: none;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  min-width: 0;
-}
-.progress {
-  width: 100%;
-}
-.progress input {
-  width: 100%;
-  -webkit-appearance: none;
-  height: 6px;
-  border-radius: 3px;
-  outline: none;
-}
-.progress input::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: url(/images/player/Thumb.svg) no-repeat center center;
-  cursor: pointer;
-}
-.volume {
-  height: 70px;
-  display: flex;
-  align-items: center;
-}
-.volume input {
-  -webkit-appearance: none;
-  width: 6px;
-  height: 65px;
-  border-radius: 3px;
-  outline: none;
-  cursor: pointer;
-  writing-mode: vertical-lr;
-  direction: rtl;
-}
-.volume input::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: url(/images/player/Thumb.svg) no-repeat center center;
-}
+  @font-face {
+    font-family: 'Sono-MONO';
+    src: url('/Sono-MONO.ttf') format('truetype');
+  }
+
+  .player {
+    background: #4a4a4a;
+    padding: 20px;
+    display: flex;
+    gap: 30px;
+    width: 100%;
+    height: 85px;
+    align-items: center;
+    min-width: 300px;
+    box-sizing: border-box;
+  }
+
+  .main-content {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    gap: 10px;
+    min-width: 0;
+  }
+
+  .controls {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .controls img {
+    width: 30px;
+    height: 30px;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: filter 0.2s ease;
+  }
+  .controls img:hover {
+    filter: brightness(0.8);
+  }
+
+  .title {
+    color: #fff;
+    font-family: 'Sono-MONO', monospace;
+    font-size: 24px;
+    flex-grow: 1;
+    text-align: center;
+    user-select: none;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+  }
+
+  .progress {
+    width: 100%;
+  }
+  .progress input {
+    width: 100%;
+    -webkit-appearance: none;
+    cursor: pointer;
+    height: 6px;
+    border-radius: 3px;
+    outline: none;
+  }
+  .progress input::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    transition: filter 0.2s ease;
+  }
+  .active.progress input::-webkit-slider-thumb {
+    background: url(/images/player/Thumb.svg) no-repeat center center;
+  }
+  .progress input::-webkit-slider-thumb:hover {
+    filter: brightness(0.9);
+  }
+  .progress:not(.active) input {
+    pointer-events: none;
+  }
+
+  .volume {
+    height: 70px;
+    display: flex;
+    align-items: center;
+  }
+  .volume input {
+    -webkit-appearance: none;
+    width: 6px;
+    height: 65px;
+    border-radius: 3px;
+    outline: none;
+    cursor: pointer;
+    writing-mode: vertical-lr;
+    direction: rtl;
+  }
+  .volume input::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: url(/images/player/Thumb.svg) no-repeat center center;
+    transition: filter 0.2s ease;
+  }
+  .volume input::-webkit-slider-thumb:hover {
+    filter: brightness(0.9);
+  }
 </style>
 
 <div class="player">
@@ -97,10 +119,10 @@
       <img src="/images/player/Play.svg" alt="play">
       <img src="/images/player/Next.svg" alt="forward">
       <img src="/images/player/Shuffle.svg" alt="shuffle">
-      <div class="title">[KARLSONVIBE]</div>
+      <div class="title">Song 1</div>
       <img src="/images/player/Playlist.svg" alt="menu">
     </div>
-    <div class="progress">
+    <div class="progress active">
       <input type="range" value="20" min="0" max="100" id="progress">
     </div>
   </div>
@@ -110,21 +132,25 @@
 </div>
 
 <script>
-const progress = document.getElementById('progress');
-const volume = document.getElementById('volume');
+  const progress = document.getElementById('progress');
+  const volume = document.getElementById('volume');
 
-function updateProgress() {
-  const val = progress.value;
-  progress.style.background = `linear-gradient(to right, #0af ${val}%, #777 ${val}%)`;
-}
-function updateVolume() {
-  const val = volume.value;
-  volume.style.background = `linear-gradient(to top, #0af ${val}%, #777 ${val}%)`;
-}
+  function updateProgress() {
+    const val = progress.value;
+    if (!document.querySelector(".progress:not(.active) input")) {
+      progress.style.background = `linear-gradient(to right, #0af ${val}%, #777 ${val}%)`;
+    } else {
+      progress.style.background = `linear-gradient(to right, #999 ${val}%, #777 ${val}%)`;
+    }
+  }
+  function updateVolume() {
+    const val = volume.value;
+    volume.style.background = `linear-gradient(to top, #0af ${val}%, #777 ${val}%)`;
+  }
 
-progress.addEventListener('input', updateProgress);
-volume.addEventListener('input', updateVolume);
+  progress.addEventListener('input', updateProgress);
+  volume.addEventListener('input', updateVolume);
 
-updateProgress();
-updateVolume();
+  updateProgress();
+  updateVolume();
 </script>
