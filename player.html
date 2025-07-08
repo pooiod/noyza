@@ -123,11 +123,11 @@
       <img src="/images/player/Playlist.svg" alt="menu">
     </div>
     <div class="progress active">
-      <input type="range" value="20" min="0" max="100" id="progress">
+      <input type="range" value="0" min="0" max="1000" id="progress">
     </div>
   </div>
   <div class="volume">
-    <input type="range" value="60" min="0" max="100" orient="vertical" id="volume">
+    <input type="range" value="100" min="0" max="100" orient="vertical" id="volume">
   </div>
 </div>
 
@@ -136,7 +136,7 @@
   const volume = document.getElementById('volume');
 
   function updateProgress() {
-    const val = progress.value;
+    const val = progress.value / progress.max * 100;
     if (!document.querySelector(".progress:not(.active) input")) {
       progress.style.background = `linear-gradient(to right, #0af ${val}%, #777 ${val}%)`;
     } else {
