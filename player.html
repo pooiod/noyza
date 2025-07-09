@@ -38,9 +38,10 @@
     cursor: pointer;
     flex-shrink: 0;
     transition: filter 0.2s ease;
+    filter: brightness(0.9);
   }
   .controls img:hover {
-    filter: brightness(0.8);
+    filter: brightness(1);
   }
 
   .title {
@@ -76,9 +77,6 @@
   }
   .active.progress input::-webkit-slider-thumb {
     background: url(/images/player/Thumb.svg) no-repeat center center;
-  }
-  .progress input::-webkit-slider-thumb:hover {
-    filter: brightness(0.9);
   }
   .progress:not(.active) input {
     pointer-events: none;

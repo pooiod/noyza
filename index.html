@@ -1,83 +1,88 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Noyza Logo Animation</title>
-<style>
-  body, html {
-    margin: 0;
-    height: 100%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    background: #121212;
-  }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  svg#loader {
-    width: 200px;
-    height: 200px;
-    opacity: 0;
-    transform: scale(0.6) rotate(-30deg);
-    animation: enter 1.2s ease forwards;
-  }
-  path#n-draw {
-    stroke-dasharray: 280;
-    stroke-dashoffset: 280;
-    stroke-width: 8;
-    animation: drawN 1.2s ease forwards;
-  }
-  circle#loader {
-    stroke: url(#grad);
-    stroke-width: 8;
-    fill: none;
-    stroke-linecap: round;
-    transform-origin: 100px 100px;
-    animation: loaderSpin 2s linear infinite;
-  }
+  <title>Noyza</title>
 
-  @keyframes enter {
-    to {
-      opacity: 1;
-      transform: scale(1) rotate(0deg);
-    }
-  }
-  @keyframes drawN {
-    to {
-      stroke-dashoffset: 0;
-    }
-  }
-  @keyframes loaderSpin {
-    100% {
-      transform: rotate(360deg);
-    }
-  }
-
-  @media (prefers-color-scheme: light) {
+  <style>
     body, html {
-      background: #ffffff;
+      margin: 0;
+      height: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: #121212;
     }
-    #n-circle {
-      fill: #c9c9c9;
+
+    svg#loader {
+      width: 200px;
+      height: 200px;
+      opacity: 0;
+      transform: scale(0.6) rotate(-30deg);
+      animation: enter 1.2s ease forwards;
     }
-    #loader {
-        filter: brightness(1.2);
+    path#n-draw {
+      stroke-dasharray: 280;
+      stroke-dashoffset: 280;
+      stroke-width: 10;
+      animation: drawN 1.2s ease forwards;
     }
-  }
-</style>
+    circle#loader {
+      stroke: url(#grad);
+      stroke-width: 8;
+      fill: none;
+      stroke-linecap: round;
+      transform-origin: 100px 100px;
+      animation: loaderSpin 2s linear infinite;
+    }
+
+    @keyframes enter {
+      to {
+        opacity: 1;
+        transform: scale(1) rotate(0deg);
+      }
+    }
+    @keyframes drawN {
+      to {
+        stroke-dashoffset: 0;
+      }
+    }
+    @keyframes loaderSpin {
+      100% {
+        transform: rotate(360deg);
+      }
+    }
+
+    @media (prefers-color-scheme: light) {
+      body, html {
+        background: #ffffff;
+      }
+      #n-circle {
+        fill: #ffffff;
+      }
+    }
+  </style>
 </head>
 <body>
-<svg id="loader" width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <linearGradient id="grad" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#FF3D6D"/>
-      <stop offset="100%" stop-color="#6A0DAD"/>
-    </linearGradient>
-  </defs>
-  <circle cx="100" cy="100" r="80" id="n-circle" stroke="#1A1A1A" stroke-width="8" fill="#1A1A1A"/>
-  <circle id="loader" cx="100" cy="100" r="80"/>
-  <path id="n-draw" d="M60 140 L90 60 L110 130 L140 70" stroke="url(#grad)" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-  <path d="M70 120 L120 120" stroke="url(#grad)" stroke-width="10" stroke-linecap="round"/>
-</svg>
+  <svg id="loader" width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="grad" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="#FF3D6D"/>
+        <stop offset="100%" stop-color="#6A0DAD"/>
+      </linearGradient>
+    </defs>
+    <circle cx="100" cy="100" r="80" id="n-circle" stroke="#1A1A1A" stroke-width="8" fill="#1A1A1A"/>
+    <circle id="loader" cx="100" cy="100" r="80"/>
+    <path id="n-draw" d="M60 140 L90 60 L110 130 L140 70" stroke="url(#grad)" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <path d="M70 120 L120 120" stroke="url(#grad)" stroke-width="10" stroke-linecap="round"/>
+  </svg>
+  <script>
+    setTimeout(() => {
+      document.cookie = "doloaderanimation=true; max-age=10; path=/";
+      window.location.href = '/home.html';
+    }, 3000);
+  </script>
 </body>
 </html>

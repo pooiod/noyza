@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Noyza - Stream Your Music</title>
+    <style>
+        :root {
+            --primary: #6c5ce7;
+            --primary-light: #a29bfe;
+            --text: #2d3436;
+            --text-light: #636e72;
+            --bg: #ffffff;
+            --card-bg: #ffffff;
+            --sidebar-bg: #ffffff;
+            --nav-bg: #ffffff;
+            --main-bg: #f9f9f9;
+            --border: #dfe6e9;
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            display: grid;
+            grid-template-columns: 240px 1fr;
+            grid-template-rows: 60px 1fr;
+            height: 100vh;
+            overflow-x: hidden;
+        }
+        nav {
+            grid-column: 2 / 3;
+            grid-row: 1 / 2;
+            background-color: var(--nav-bg);
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            padding-left: 10px;
+            z-index: 10;
+        }
+        .nav-logo {
+            margin-right: 32px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .nav-logo img {
+            height: 28px;
+        }
+        .sidebar-toggle {
+            display: none;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 8px;
+            margin-right: -8px;
+        }
+        .sidebar-toggle img {
+            width: 20px;
+            height: 20px;
+            filter: invert(70%) sepia(0%) saturate(0%) hue-rotate(93deg) brightness(87%) contrast(84%);
+        }
+        .nav-links {
+            display: flex;
+            gap: 24px;
+        }
+        .nav-link {
+            color: var(--text-light);
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 14px;
+            transition: color 0.2s;
+        }
+        .nav-link:hover {
+            color: var(--primary);
+        }
+        .search-bar {
+            margin-left: auto;
+            position: relative;
+            width: 240px;
+        }
+        .search-bar input {
+            width: 100%;
+            padding: 8px 12px 8px 36px;
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            font-size: 14px;
+            outline: none;
+            background-color: #f1f1f1;
+            transition: all 0.2s;
+        }
+        .search-bar input:focus {
+            background-color: white;
+            border-color: var(--primary-light);
+            box-shadow: 0 0 0 3px rgba(108, 92, 231, 0.1);
+        }
+        .search-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 16px;
+            height: 16px;
+            filter: invert(70%) sepia(0%) saturate(0%) hue-rotate(93deg) brightness(87%) contrast(84%);
+        }
+        .search-bar input:focus + .search-icon {
+            filter: invert(39%) sepia(57%) saturate(1039%) hue-rotate(228deg) brightness(93%) contrast(91%);
+        }
+        aside {
+            grid-column: 1 / 2;
+            grid-row: 1 / 3;
+            background-color: var(--sidebar-bg);
+            padding: 24px 0;
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.3s ease;
+            z-index: 20;
+        }
+        .sidebar-header {
+            display: none;
+            padding: 16px;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 16px;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .sidebar-close {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 4px;
+        }
+        .sidebar-close img {
+            width: 20px;
+            height: 20px;
+            filter: invert(70%) sepia(0%) saturate(0%) hue-rotate(93deg) brightness(87%) contrast(84%);
+        }
+        .sidebar-section {
+            margin-bottom: 32px;
+            padding: 0 16px;
+        }
+        .sidebar-title {
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-light);
+            margin-bottom: 16px;
+            padding: 0 8px;
+        }
+        .sidebar-link {
+            display: flex;
+            align-items: center;
+            padding: 8px 12px;
+            border-radius: 6px;
+            color: var(--text);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 4px;
+            transition: all 0.2s;
+        }
+        .sidebar-link:hover {
+            background-color: #f1f1f1;
+            color: var(--primary);
+        }
+        .sidebar-link.active {
+            background-color: var(--primary-light);
+            color: var(--primary);
+            font-weight: 600;
+        }
+        .sidebar-link i {
+            margin-right: 12px;
+            font-size: 18px;
+        }
+        main {
+            grid-column: 2 / 3;
+            grid-row: 2 / 3;
+            padding: 24px;
+            padding-bottom: calc(24px + 80px);
+            overflow-y: auto;
+            background-color: var(--main-bg);
+            border-top: 1px solid var(--border);
+            border-left: 1px solid var(--border);
+            border-top-left-radius: 12px;
+        }
+        .section {
+            margin-bottom: 32px;
+        }
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        .section-title {
+            font-size: 20px;
+            font-weight: 700;
+        }
+        .section-link {
+            color: var(--text-light);
+            font-size: 14px;
+            font-weight: 500;
+            text-decoration: none;
+        }
+        .section-link:hover {
+            color: var(--primary);
+            text-decoration: underline;
+        }
+        .tracks-container {
+            overflow-x: auto;
+            padding-bottom: 8px;
+        }
+        .tracks-grid {
+            display: flex;
+            gap: 16px;
+            width: max-content;
+            padding-bottom: 8px;
+        }
+        .track-card {
+            background-color: var(--card-bg);
+            border-radius: 8px;
+            overflow: hidden;
+            transition: transform 0.2s, box-shadow 0.2s;
+            cursor: pointer;
+            width: 160px;
+            flex-shrink: 0;
+        }
+        .track-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.08);
+        }
+        .track-image {
+            width: 100%;
+            aspect-ratio: 1;
+            object-fit: cover;
+            border-radius: 6px;
+            margin-bottom: 8px;
+        }
+        .track-info {
+            padding: 0 4px 8px;
+        }
+        .track-title {
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .track-artist {
+            font-size: 12px;
+            color: var(--text-light);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .sidebar-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 15;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s, visibility 0.3s;
+        }
+        .sidebar-overlay.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+        #player {
+            position: fixed;
+            bottom: 0;
+            left: 240px;
+            right: 0;
+            height: 80px;
+            z-index: 5;
+        }
+        @media (max-width: 1024px) {
+            body {
+                grid-template-columns: 1fr;
+            }
+            nav {
+                grid-column: 1 / 2;
+            }
+            aside {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                max-width: 320px;
+                height: 100vh;
+                transform: translateX(-100%);
+                box-shadow: 2px 0 8px rgba(0,0,0,0.1);
+            }
+            aside.visible {
+                transform: translateX(0);
+            }
+            .sidebar-header {
+                display: flex;
+                margin-top: -25px;
+            }
+            .sidebar-toggle {
+                display: block;
+            }
+            main {
+                grid-column: 1 / 2;
+                border-top-left-radius: 0;
+                border-left: none;
+            }
+            .search-bar {
+                width: 180px;
+            }
+            #player {
+                left: 0;
+            }
+        }
+        @media (max-width: 768px) {
+            .nav-links {
+                display: none;
+            }
+            .search-bar {
+                width: 150px;
+            }
+        }
+        @media (max-width: 480px) {
+            aside {
+                max-width: 100%;
+            }
+            main {
+                border-top: none;
+            }
+            .search-bar {
+                width: 120px;
+            }
+        }
+
+        #loaderback {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: #fff;
+            z-index: 9999999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.4s ease;
+        }
+
+        #loader {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div id="loaderback" style="display:none;">
+        <svg id="loader" width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <linearGradient id="grad" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stop-color="#FF3D6D"/>
+                    <stop offset="100%" stop-color="#6A0DAD"/>
+                </linearGradient>
+            </defs>
+            <circle cx="100" cy="100" r="80" stroke="url(#grad)" stroke-width="8"/>
+            <path d="M60 140 L90 60 L110 130 L140 70" stroke="url(#grad)" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M70 120 L120 120" stroke="url(#grad)" stroke-width="10" stroke-linecap="round"/>
+        </svg>
+    </div>
+
+    <script>
+        if (document.cookie.includes("doloaderanimation=true")) {
+            document.getElementById('loaderback').removeAttribute('style');
+            window.addEventListener('load', () => {
+                document.getElementById('loaderback').style.opacity = '0';
+                setTimeout(() => {
+                    document.cookie = "doloaderanimation=false; max-age=10; path=/";
+                    document.getElementById('loaderback').style.display = 'none';
+                }, 400);
+            });
+        }
+    </script>
+
+    <nav>
+        <div class="nav-logo">
+            <img src="/images/noyza.svg" alt="Noyza">
+            <button class="sidebar-toggle" id="sidebarToggle">
+                <img src="/images/menu.svg" alt="Menu">
+            </button>
+        </div>
+        <div class="nav-links">
+            <a href="#" class="nav-link">Home</a>
+            <a href="#" class="nav-link">Browse</a>
+            <a href="#" class="nav-link">Radio</a>
+        </div>
+        <div class="search-bar">
+            <input type="text" placeholder="Search songs and artists...">
+            <img src="/images/Search.svg" alt="Search" class="search-icon">
+        </div>
+    </nav>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    <aside id="sidebar">
+        <div class="sidebar-header">
+            <img src="/images/noyza.svg" alt="Noyza" style="height: 30px;">
+            <button class="sidebar-close" id="sidebarClose">
+                <img src="/images/close.svg" alt="Close">
+            </button>
+        </div>
+        <div class="sidebar-section">
+            <div class="sidebar-title">Navigate</div>
+            <a href="#" class="sidebar-link active">Home</a>
+            <a href="#" class="sidebar-link">Discover</a>
+        </div>
+        <div class="sidebar-section">
+            <div class="sidebar-title">Your Music</div>
+            <a href="#" class="sidebar-link">Liked Songs</a>
+            <a href="#" class="sidebar-link">Recently Played</a>
+            <a href="#" class="sidebar-link">Playlists</a>
+        </div>
+    </aside>
+    <main>
+        <section class="section">
+            <div class="section-header">
+                <h2 class="section-title">Recently Played</h2>
+                <a href="#" class="section-link">See all</a>
+            </div>
+            <div class="tracks-container">
+                <div class="tracks-grid">
+                    <div class="track-card">
+                        <img src="https://i.scdn.co/image/ab67616d00001e02ff9ca10b55ce82ae553c8228" alt="Track" class="track-image">
+                        <div class="track-info">
+                            <div class="track-title">Blinding Lights</div>
+                            <div class="track-artist">The Weeknd</div>
+                        </div>
+                    </div>
+                    <div class="track-card">
+                        <img src="https://i.scdn.co/image/ab67616d00001e029ad3e9959f48d513886b8933" alt="Track" class="track-image">
+                        <div class="track-info">
+                            <div class="track-title">Save Your Tears</div>
+                            <div class="track-artist">The Weeknd</div>
+                        </div>
+                    </div>
+                    <div class="track-card">
+                        <img src="https://i.scdn.co/image/ab67616d00001e02c7e055f88c7e7a91523a2745" alt="Track" class="track-image">
+                        <div class="track-info">
+                            <div class="track-title">Levitating</div>
+                            <div class="track-artist">Dua Lipa</div>
+                        </div>
+                    </div>
+                    <div class="track-card">
+                        <img src="https://i.scdn.co/image/ab67616d00001e02a991995542d50a691b9ae5be" alt="Track" class="track-image">
+                        <div class="track-info">
+                            <div class="track-title">Stay</div>
+                            <div class="track-artist">The Kid LAROI, Justin Bieber</div>
+                        </div>
+                    </div>
+                    <div class="track-card">
+                        <img src="https://i.scdn.co/image/ab67616d00001e02d5f9981d1b159d525fe2a9b5" alt="Track" class="track-image">
+                        <div class="track-info">
+                            <div class="track-title">good 4 u</div>
+                            <div class="track-artist">Olivia Rodrigo</div>
+                        </div>
+                    </div>
+                    <div class="track-card">
+                        <img src="https://i.scdn.co/image/ab67616d00001e02e6f407c7f3a0ec98845e4431" alt="Track" class="track-image">
+                        <div class="track-info">
+                            <div class="track-title">Don't Start Now</div>
+                            <div class="track-artist">Dua Lipa</div>
+                        </div>
+                    </div>
+                    <div class="track-card">
+                        <img src="https://i.scdn.co/image/ab67616d00001e02b1c4b76e23414c9f20242268" alt="Track" class="track-image">
+                        <div class="track-info">
+                            <div class="track-title">Watermelon Sugar</div>
+                            <div class="track-artist">Harry Styles</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <section class="section">
+            <div class="section-header">
+                <h2 class="section-title">Liked Tracks</h2>
+                <a href="#" class="section-link">See all</a>
+            </div>
+            <div class="tracks-container">
+                <div class="tracks-grid">
+                    <div class="track-card">
+                        <img src="https://i.scdn.co/image/ab67616d00001e02e6f407c7f3a0ec98845e4431" alt="Track" class="track-image">
+                        <div class="track-info">
+                            <div class="track-title">Don't Start Now</div>
+                            <div class="track-artist">Dua Lipa</div>
+                        </div>
+                    </div>
+                    <div class="track-card">
+                        <img src="https://i.scdn.co/image/ab67616d00001e02b1c4b76e23414c9f20242268" alt="Track" class="track-image">
+                        <div class="track-info">
+                            <div class="track-title">Watermelon Sugar</div>
+                            <div class="track-artist">Harry Styles</div>
+                        </div>
+                    </div>
+                    <div class="track-card">
+                        <img src="https://i.scdn.co/image/ab67616d00001e02f7286fea9466616b2c7751e9" alt="Track" class="track-image">
+                        <div class="track-info">
+                            <div class="track-title">Break My Heart</div>
+                            <div class="track-artist">Dua Lipa</div>
+                        </div>
+                    </div>
+                    <div class="track-card">
+                        <img src="https://i.scdn.co/image/ab67616d00001e02d4daf28d55fe4197ede848be" alt="Track" class="track-image">
+                        <div class="track-info">
+                            <div class="track-title">Circles</div>
+                            <div class="track-artist">Post Malone</div>
+                        </div>
+                    </div>
+                    <div class="track-card">
+                        <img src="https://i.scdn.co/image/ab67616d00001e02a048415db4915d575ac9f926" alt="Track" class="track-image">
+                        <div class="track-info">
+                            <div class="track-title">Sunflower</div>
+                            <div class="track-artist">Post Malone, Swae Lee</div>
+                        </div>
+                    </div>
+                    <div class="track-card">
+                        <img src="https://i.scdn.co/image/ab67616d00001e02ff9ca10b55ce82ae553c8228" alt="Track" class="track-image">
+                        <div class="track-info">
+                            <div class="track-title">Blinding Lights</div>
+                            <div class="track-artist">The Weeknd</div>
+                        </div>
+                    </div>
+                    <div class="track-card">
+                        <img src="https://i.scdn.co/image/ab67616d00001e029ad3e9959f48d513886b8933" alt="Track" class="track-image">
+                        <div class="track-info">
+                            <div class="track-title">Save Your Tears</div>
+                            <div class="track-artist">The Weeknd</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+    <div id="player"></div>
+    <script>
+        const sidebarToggle = document.getElementById('sidebarToggle')
+        const sidebarClose = document.getElementById('sidebarClose')
+        const sidebar = document.getElementById('sidebar')
+        const sidebarOverlay = document.getElementById('sidebarOverlay')
+
+        function toggleSidebar() {
+        sidebar.classList.toggle('visible')
+        sidebarOverlay.classList.toggle('visible')
+        }
+
+        sidebarToggle.addEventListener('click', toggleSidebar)
+        sidebarClose.addEventListener('click', toggleSidebar)
+        sidebarOverlay.addEventListener('click', toggleSidebar)
+
+        fetch('/player.html')
+        .then(response => response.text())
+        .then(html => {
+            const container = document.getElementById('player')
+            container.innerHTML = html
+            const scripts = Array.from(container.querySelectorAll('script'))
+            scripts.forEach(oldScript => {
+            const newScript = document.createElement('script')
+            if (oldScript.src) {
+                newScript.src = oldScript.src
+            } else {
+                newScript.textContent = oldScript.textContent
+            }
+            document.body.appendChild(newScript)
+            })
+        })
+  .catch(error => console.error(error))
+    </script>
+</body>
+</html>
