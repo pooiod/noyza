@@ -229,7 +229,7 @@
             transition: all 0.2s;
         }
         .sidebar-link:hover {
-            background-color: #f1f1f1;
+            background-color: #76767628;
             color: var(--primary);
         }
         .sidebar-link.active {
@@ -461,14 +461,11 @@
     <nav>
         <div class="nav-logo">
             <img src="/images/noyza.svg" alt="Noyza">
-            <button class="sidebar-toggle" id="sidebarToggle">
-                <img src="/images/menu.svg" alt="Menu">
-            </button>
+            <button class="sidebar-toggle" id="sidebarToggle">Navigation</button>
         </div>
         <div class="nav-links">
-            <a href="#" class="nav-link">Home</a>
-            <a href="#" class="nav-link">Browse</a>
-            <a href="#" class="nav-link">Radio</a>
+            <a href="/settings.html" class="nav-link">Settings</a>
+            <a href="/plugins.html" class="nav-link">Plugins</a>
         </div>
         <div class="search-bar">
             <input type="text" placeholder="Search songs and artists...">
@@ -479,27 +476,25 @@
     <aside id="sidebar">
         <div class="sidebar-header">
             <img src="/images/noyza.svg" alt="Noyza" style="height: 30px;">
-            <button class="sidebar-close" id="sidebarClose">
-                <img src="/images/close.svg" alt="Close">
-            </button>
+            <button class="sidebar-close" id="sidebarClose">Back</button>
         </div>
         <div class="sidebar-section">
             <div class="sidebar-title">Navigate</div>
-            <a href="#" class="sidebar-link active">Home</a>
-            <a href="#" class="sidebar-link">Discover</a>
+            <a href="/home.html" class="sidebar-link active">Home</a>
+            <a href="/browse/" class="sidebar-link">Discover</a>
         </div>
         <div class="sidebar-section">
             <div class="sidebar-title">Your Music</div>
-            <a href="#" class="sidebar-link">Liked Songs</a>
-            <a href="#" class="sidebar-link">Recently Played</a>
-            <a href="#" class="sidebar-link">Playlists</a>
+            <a href="/browse/#/likes" class="sidebar-link">Liked Songs</a>
+            <a href="/browse/#/recents" class="sidebar-link">Recently Played</a>
+            <a href="/browse/#/playlists" class="sidebar-link">Playlists</a>
         </div>
     </aside>
     <main>
         <section class="section">
             <div class="section-header">
                 <h2 class="section-title">Recently Played</h2>
-                <a href="#" class="section-link">See all</a>
+                <a href="/browse/#/recents" class="section-link">See all</a>
             </div>
             <div class="tracks-container">
                 <div class="tracks-grid">
@@ -558,7 +553,7 @@
         <section class="section">
             <div class="section-header">
                 <h2 class="section-title">Liked Tracks</h2>
-                <a href="#" class="section-link">See all</a>
+                <a href="/browse/#/likes" class="section-link">See all</a>
             </div>
             <div class="tracks-container">
                 <div class="tracks-grid">
