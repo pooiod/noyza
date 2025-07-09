@@ -5,7 +5,8 @@
   }
 
   .player {
-    background: #4a4a4a;
+    border-top: 1px solid var(--border, #ccc);
+    background: var(--bg, #fff);
     padding: 20px;
     display: flex;
     gap: 30px;
@@ -38,14 +39,14 @@
     cursor: pointer;
     flex-shrink: 0;
     transition: filter 0.2s ease;
-    filter: brightness(0.9);
+    filter: brightness(0.7) invert(var(--light, 1));
   }
   .controls img:hover {
-    filter: brightness(1);
+    filter: brightness(1) invert(var(--light, 1));
   }
 
   .title {
-    color: #fff;
+    color: var(--text, #000);
     font-family: 'Sono-MONO', monospace;
     font-size: 24px;
     flex-grow: 1;
@@ -73,6 +74,7 @@
     width: 16px;
     height: 16px;
     border-radius: 50%;
+    border: 1.5px solid #787878;
     transition: filter 0.2s ease;
   }
   .active.progress input::-webkit-slider-thumb {
@@ -83,7 +85,7 @@
   }
 
   .volume {
-    height: 70px;
+    height: 60px;
     display: flex;
     align-items: center;
   }
@@ -103,6 +105,7 @@
     height: 16px;
     border-radius: 50%;
     background: url(/images/player/Thumb.svg) no-repeat center center;
+    border: 1.5px solid #787878;
     transition: filter 0.2s ease;
   }
   .volume input::-webkit-slider-thumb:hover {
