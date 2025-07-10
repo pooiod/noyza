@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="theme-color" content="#fff" />
+    <title>Settings</title>
+    <style>
+        :root{--primary:#6c5ce7;--primary-light:#a29bfe;--text:#2d3436;--text-light:#636e72;--bg:#ffffff;--main-bg:#f9f9f9;--border:#dfe6e9;--card-bg:#ffffff;--cardBorder:#eeeeee;--light:1}
+        @media (prefers-color-scheme:dark){:root{--primary:#a29bfe;--primary-light:#656294;--text:#dfe6e9;--text-light:#b2bec3;--bg:#000;--main-bg:#141517;--border:#292d2e;--card-bg:#24282c;--cardBorder:#353b3d;--light:0}}
+        *{margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif}
+        body{background-color:var(--bg);color:var(--text);display:grid;grid-template-columns:240px 1fr;grid-template-rows:60px 1fr;height:100vh;overflow:hidden}
+        nav{grid-column:2/3;grid-row:1/2;background-color:var(--bg);display:flex;align-items:center;padding:0 24px;z-index:10}
+        .nav-logo img{height:28px}
+        .nav-links{display:flex;gap:24px;margin-left:32px}
+        .nav-link{color:var(--text-light);text-decoration:none;font-weight:500;font-size:14px;transition:color .2s}
+        .nav-link.active,.nav-link:hover{color:var(--primary)}
+        aside{grid-column:1/2;grid-row:1/3;background-color:var(--bg);padding:24px 0;display:flex;flex-direction:column;border-right:1px solid var(--border)}
+        .sidebar-section{margin-bottom:32px;padding:0 16px}
+        .sidebar-title{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--text-light);margin-bottom:8px}
+        .sidebar-link{display:block;padding:8px 12px;border-radius:6px;color:var(--text);text-decoration:none;font-size:14px;font-weight:500;margin-bottom:4px;transition:background .2s,color .2s}
+        .sidebar-link.active,.sidebar-link:hover{background-color:var(--primary-light);color:var(--text)}
+        main{grid-column:2/3;grid-row:2/3;padding:24px;overflow-y:auto;background-color:var(--main-bg)}
+        .section{margin-bottom:32px}
+        .section-header{margin-bottom:16px}
+        .section-title{font-size:20px;font-weight:700}
+        .setting{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+        .setting label{font-size:14px;color:var(--text)}
+        .setting input[type=checkbox],.setting input[type=radio]{width:16px;height:16px}
+        .setting input[type=range]{width:150px}
+        .setting textarea{width:100%;height:80px;padding:4px;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text)}
+        .btn{padding:8px 16px;background-color:var(--primary);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px}
+        .btn:hover{background-color:var(--primary-light)}
+        h1{font-size:28px;font-weight:700;margin-bottom:24px}
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="nav-logo"><img src="/images/noyza.svg" alt="Logo"/></div>
+        <div class="nav-links">
+            <a href="#" class="nav-link active">Settings</a>
+            <a href="#" class="nav-link">Plugins</a>
+        </div>
+    </nav>
+    <aside>
+        <div class="sidebar-section">
+            <div class="sidebar-title">Menu</div>
+            <a href="#" class="sidebar-link active">Settings</a>
+            <a href="#" class="sidebar-link">Home</a>
+        </div>
+    </aside>
+    <main id="settings-container"></main>
+    <script>
+        const settingsTemplate=[
+            {type:"title",text:"Settings"},
+            {section:"User Data",items:[
+                {type:"file",id:"import",label:"Import Data",accept:".json"},
+                {type:"button",id:"export",label:"Export Data"},
+                {type:"text",id:"username","label":"Display Name"},
+                {type:"array",id:"playlists",label:"Playlist IDs"}
+            ]},
+            {section:"Player",items:[
+                {type:"slider",id:"crossfade",label:"Crossfade Duration",min:0,max:12,value:6},
+                {type:"checkbox",id:"gapless",label:"Gapless Playback",checked:true},
+                {type:"dropdown",id:"quality",label:"Quality",options:["Low","Medium","High"],value:"Medium"}
+            ]},
+            {section:"Theme",items:[
+                {type:"color",id:"accent",label:"Accent Color",value:"#6c5ce7"},
+                {type:"dropdown",id:"theme",label:"Theme",options:["Light","Dark"],value:"Light"}
+            ]},
+            {section:"Plugins",items:[
+                {type:"checkbox",id:"eq",label:"Equalizer Plugin"},
+                {type:"checkbox",id:"lyrics",label:"Lyrics Plugin",checked:true}
+            ]},
+            {section:"Cache Management",items:[
+                {type:"label",id:"cache-size",label:"Cached Songs Size","text":"125 MB"},
+                {type:"button",id:"clear-cache",label:"Clear Cache"},
+                {type:"checkbox",id:"offline",label:"Offline Mode"}
+            ]}
+        ];
+        const c=document.getElementById("settings-container");
+        settingsTemplate.forEach(e=>{
+            if(e.type==="title"){
+                const h=document.createElement("h1");
+                h.textContent=e.text;
+                c.appendChild(h);
+            }else if(e.section){
+                const sec=document.createElement("section");
+                sec.className="section";
+                const hdr=document.createElement("div");
+                hdr.className="section-header";
+                const t=document.createElement("h2");
+                t.className="section-title";
+                t.textContent=e.section;
+                hdr.appendChild(t);
+                sec.appendChild(hdr);
+                e.items.forEach(i=>{
+                    const d=document.createElement("div");
+                    d.className="setting";
+                    if(i.type!=="button"){
+                        const l=document.createElement("label");
+                        l.htmlFor=i.id;
+                        l.textContent=i.label;
+                        d.appendChild(l);
+                    }
+                    let inp;
+                    switch(i.type){
+                        case"dropdown":
+                            inp=document.createElement("select");
+                            inp.id=i.id;
+                            i.options.forEach(o=>{
+                                const opt=document.createElement("option");
+                                opt.value=o;opt.textContent=o;
+                                if(o===i.value)opt.selected=true;
+                                inp.appendChild(opt);
+                            });
+                            break;
+                        case"slider":
+                            inp=document.createElement("input");
+                            inp.type="range";inp.id=i.id;inp.min=i.min;inp.max=i.max;inp.value=i.value;
+                            break;
+                        case"button":
+                            inp=document.createElement("button");
+                            inp.id=i.id;inp.className="btn";inp.textContent=i.label;
+                            break;
+                        case"file":
+                            inp=document.createElement("input");
+                            inp.type="file";inp.id=i.id;inp.accept=i.accept;
+                            break;
+                        case"text":
+                            inp=document.createElement("input");
+                            inp.type="text";inp.id=i.id;
+                            break;
+                        case"array":
+                            inp=document.createElement("textarea");
+                            inp.id=i.id;
+                            break;
+                        case"checkbox":
+                            inp=document.createElement("input");
+                            inp.type="checkbox";inp.id=i.id;
+                            if(i.checked)inp.checked=true;
+                            break;
+                        case"color":
+                            inp=document.createElement("input");
+                            inp.type="color";inp.id=i.id;inp.value=i.value;
+                            break;
+                        case"label":
+                            inp=document.createElement("span");
+                            inp.id=i.id;inp.textContent=i.text;
+                            break;
+                    }
+                    d.appendChild(inp);
+                    sec.appendChild(d);
+                });
+                c.appendChild(sec);
+            }
+        });
+    </script>
+</body>
+</html>
