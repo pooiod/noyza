@@ -1,6 +1,3 @@
-// Capsule (v1), a multi-platform app kit by pooiod7
-// https://github.com/pooiod/Capsule
-
 const dbName = 'AppFilesDB';
 const storeName = 'files';
 const whitelist = ["/update", "/update.html", "/update/"];
@@ -20,11 +17,31 @@ const mimeTypes = {
     'woff2': 'font/woff2'
 };
 
+let dbInstance = null;
+
 function getDB() {
     return new Promise((resolve, reject) => {
+        if (dbInstance) {
+            resolve(dbInstance);
+            return;
+        }
         const request = indexedDB.open(dbName, 1);
-        request.onsuccess = e => resolve(e.target.result);
+        request.onupgradeneeded = e => {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains(storeName)) {
+                db.createObjectStore(storeName);
+            }
+        };
+        request.onsuccess = e => {
+            dbInstance = e.target.result;
+            dbInstance.onversionchange = () => {
+                dbInstance.close();
+                dbInstance = null;
+            };
+            resolve(dbInstance);
+        };
         request.onerror = e => reject(e.target.error);
+        request.onblocked = e => reject(new Error('Blocked'));
     });
 }
 
@@ -47,11 +64,9 @@ async function getConfig() {
 async function checkHasFiles() {
     try {
         const db = await getDB();
-
         if (!db.objectStoreNames.contains(storeName)) {
             return false;
         }
-
         return new Promise((resolve) => {
             const tx = db.transaction(storeName, 'readonly');
             const store = tx.objectStore(storeName);
@@ -88,7 +103,6 @@ async function processTemplate(text) {
     const regex = /\{\{(.+?)\}\}/g;
     const matches = [...new Set(text.match(regex))];
     if (!matches || matches.length === 0) return text;
-
     for (const match of matches) {
         const innerPath = match.slice(2, -2).trim();
         try {
@@ -189,13 +203,11 @@ self.addEventListener('fetch', (event) => {
                 const config = await getConfig();
                 const res = await fetch(config.appurl, { method: 'HEAD', cache: 'no-store' });
                 const currentVersion = res.headers.get('ETag') || res.headers.get('Last-Modified') || res.headers.get('Content-Length');
-
                 const db = await getDB();
                 return new Promise((resolve) => {
                     const tx = db.transaction(storeName, 'readonly');
                     const store = tx.objectStore(storeName);
                     const req = store.get('__meta_version__');
-                    
                     req.onsuccess = async () => {
                         let needsUpdate = false;
                         if (req.result && currentVersion) {
@@ -290,7 +302,6 @@ self.addEventListener('fetch', (event) => {
 
     event.respondWith((async () => {
         let path = url.pathname.substring(1);
-        
         if (path === '' || path.endsWith('/')) {
             path += 'index.html';
         }
@@ -300,7 +311,6 @@ self.addEventListener('fetch', (event) => {
         if (blob) {
             let mime = getMimeType(path);
             let finalBody = blob;
-
             if (['text/html', 'application/javascript', 'text/css', 'image/svg+xml', 'application/json', 'text/plain'].includes(mime)) {
                 try {
                     let text = await blob.text();
@@ -308,7 +318,6 @@ self.addEventListener('fetch', (event) => {
                     finalBody = text;
                 } catch (e) {}
             }
-
             return new Response(finalBody, {
                 status: 200,
                 headers: {
@@ -320,9 +329,9 @@ self.addEventListener('fetch', (event) => {
         try {
             return await fetch(event.request);
         } catch (err) {
-            return new Response('File not found.', { 
+            return new Response('<!DOCTYPE html>\n<html>\n<head>\n<title>Error</title>\n</head>\n<body>\n<h1>Error</h1>\n<p>Service Worker encountered an error fetching the resource.</p>\n</body>\n</html>', { 
                 status: 503,
-                headers: { 'Content-Type': 'text/plain' }
+                headers: { 'Content-Type': 'text/html' }
             });
         }
     })());
