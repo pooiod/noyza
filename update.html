@@ -168,6 +168,7 @@
         let currentProgress = 0;
         let targetProgress = 0;
         let redirectTriggered = false;
+        let globalDb = null;
 
         function updateProgress(percent) {
             if (!isNaN(percent)) {
@@ -176,6 +177,9 @@
         }
 
         function redirect() {
+            if (globalDb) {
+                globalDb.close();
+            }
             const url = '/?rand=' + Math.floor(Math.random() * 1000000);
             if ('caches' in window) {
                 caches.keys().then(names => {
@@ -268,6 +272,7 @@
         }
 
         getDatabase().then(db => {
+            globalDb = db;
             updateProgress(0);
 
             fetch(appurl, { cache: 'no-store' })
