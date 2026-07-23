@@ -296,7 +296,6 @@ button {
   height: 100%;
   background-color: var(--primary);
   border-radius: var(--radius-full);
-  width: 45%;
 }
 .time-text {
   color: var(--outline);

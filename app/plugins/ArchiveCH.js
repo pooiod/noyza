@@ -62,6 +62,7 @@
             const data = await response.json();
             let results = [];
             switch (type) {
+                case "foryou":
                 case "recomended":
                 case "popular":
                 case "trending":
@@ -71,7 +72,7 @@
                     results = data.sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 10);
                     break;
                 default:
-                    throw new Error("Unknown category type");
+                    results = data.sort(() => 0.5 - Math.random()).slice(0, 10);
             }
 
             return results.map(song => ({
