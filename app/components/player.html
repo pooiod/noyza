@@ -13,7 +13,7 @@
       <img src="/assets/images/player/Next.svg" alt="Next">
     </button>
     <button class="btn-icon" id="btn-shuffle">
-      <img src="/assets/images/player/Shuffle.svg" alt="Shuffle">
+      <img src="/assets/images/player/Shuffle.svg" alt="Shuffle" id="icon-shuffle">
     </button>
     
     <div class="player-title-display">
@@ -39,4 +39,12 @@
     </div>
   </div>
 </div>
+
+<div id="queue-panel" class="queue-panel hidden">
+  <div class="queue-header">
+    <span class="title-sm">Playing Queue</span>
+  </div>
+  <div class="queue-list" id="queue-list"></div>
+</div>
+
 <audio id="audio-element"></audio>

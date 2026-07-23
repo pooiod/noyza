@@ -14,6 +14,7 @@
   --background: #f8f9ff;
   --on-background: #0b1c30;
   --player-icon-filter: invert(0.9);
+  --player-icon-active-filter: invert(0.5) sepia(1) saturate(5) hue-rotate(180deg);
 }
 
 [data-theme-mode="dark"] {
@@ -32,4 +33,5 @@
   --background: #0b1c30;
   --on-background: #eaf1ff;
   --player-icon-filter: invert(0.9);
+  --player-icon-active-filter: invert(0.5) sepia(1) saturate(5) hue-rotate(180deg);
 }

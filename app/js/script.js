@@ -1,20 +1,23 @@
 window.Noyza = {
-  PluginType: {
-    Provider: "provider"
-  },
+  PluginType: { Provider: "provider" },
   extensions: {
     plugins: [],
-    register(plugin) {
-      this.plugins.push(plugin);
-    }
+    register(plugin) { this.plugins.push(plugin); }
   }
 };
 
 let accountData = {
   theme: 'serenity',
-  mode: 'dark',
+  mode: 'system',
   volume: 1.0
 };
+
+let currentQueue = [];
+let originalQueue = [];
+let queueIndex = -1;
+let isShuffle = false;
+let currentPluginId = "";
+let isPlaying = false;
 
 async function loadAccount() {
   const local = localStorage.getItem('noyza_account');
@@ -38,15 +41,26 @@ function saveAccount() {
 
 function applyTheme() {
   const link = document.getElementById('theme-stylesheet');
-  if (link) {
-    link.href = `/themes/${accountData.theme}.css`;
+  if (link) link.href = `/themes/${accountData.theme}.css`;
+
+  let mode = accountData.mode;
+  if (mode === 'system') {
+    mode = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
   }
-  document.body.setAttribute('data-theme-mode', accountData.mode);
+  document.body.setAttribute('data-theme-mode', mode);
 }
+
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+  if (accountData.mode === 'system') applyTheme();
+});
 
 function formatTitle(title) {
   const stripped = title.toUpperCase().replace(/\s+/g, '');
   return `[ ${stripped.split('').join(' ')} ]`;
+}
+
+function getPlugin(id) {
+  return window.Noyza.extensions.plugins.find(p => p.getInfo().id === id);
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -113,11 +127,8 @@ document.addEventListener("DOMContentLoaded", async () => {
           card.appendChild(art);
           card.appendChild(info);
           
-          card.addEventListener('click', async () => {
-            try {
-              const fullSong = await plugin.getSong(song.id);
-              playSong(fullSong);
-            } catch (err) {}
+          card.addEventListener('click', () => {
+            playQueue(songs, index, plugin.getInfo().id);
           });
           grid.appendChild(card);
         });
@@ -128,12 +139,71 @@ document.addEventListener("DOMContentLoaded", async () => {
   initPlayer();
 });
 
-let isPlaying = false;
+async function playQueue(list, index, pluginId) {
+  currentQueue = [...list];
+  originalQueue = [...list];
+  queueIndex = index;
+  currentPluginId = pluginId;
+  
+  if (isShuffle) {
+    const selected = currentQueue[index];
+    currentQueue.splice(index, 1);
+    currentQueue.sort(() => Math.random() - 0.5);
+    currentQueue.unshift(selected);
+    queueIndex = 0;
+  }
+  
+  updateQueueUI();
+  await loadAndPlayCurrent();
+}
+
+async function loadAndPlayCurrent() {
+  if (queueIndex < 0 || queueIndex >= currentQueue.length) return;
+  const plugin = getPlugin(currentPluginId);
+  if (!plugin) return;
+  
+  const baseSong = currentQueue[queueIndex];
+  try {
+    const fullSong = await plugin.getSong(baseSong.id);
+    const audio = document.getElementById('audio-element');
+    const titleDisplay = document.getElementById('player-title');
+    
+    if (audio && titleDisplay) {
+      audio.src = fullSong.url;
+      titleDisplay.textContent = formatTitle(fullSong.title);
+      audio.play();
+    }
+  } catch (err) {}
+}
+
+function updateQueueUI() {
+  const list = document.getElementById('queue-list');
+  if (!list) return;
+  list.innerHTML = '';
+  
+  currentQueue.forEach((s, i) => {
+    const div = document.createElement('div');
+    div.className = 'queue-item' + (i === queueIndex ? ' active' : '');
+    div.textContent = s.title;
+    div.addEventListener('click', () => {
+      queueIndex = i;
+      updateQueueUI();
+      loadAndPlayCurrent();
+    });
+    list.appendChild(div);
+  });
+}
 
 function initPlayer() {
   const audio = document.getElementById('audio-element');
   const playBtn = document.getElementById('btn-play-pause');
   const playIcon = document.getElementById('icon-play');
+  const nextBtn = document.getElementById('btn-next');
+  const prevBtn = document.getElementById('btn-prev');
+  const shuffleBtn = document.getElementById('btn-shuffle');
+  const playlistBtn = document.getElementById('btn-playlist');
+  const openBtn = document.getElementById('btn-open');
+  const queuePanel = document.getElementById('queue-panel');
   const progTrack = document.getElementById('progress-track');
   const progFill = document.getElementById('progress-fill');
   const progThumb = document.getElementById('progress-thumb');
@@ -158,12 +228,72 @@ function initPlayer() {
 
   audio.addEventListener('play', () => {
     isPlaying = true;
-    playIcon.src = '/assets/images/player/NoPlay.svg';
+    playIcon.src = '/assets/images/player/Pause.svg';
   });
 
   audio.addEventListener('pause', () => {
     isPlaying = false;
     playIcon.src = '/assets/images/player/Play.svg';
+  });
+  
+  audio.addEventListener('ended', () => {
+    if (queueIndex < currentQueue.length - 1) {
+      queueIndex++;
+      updateQueueUI();
+      loadAndPlayCurrent();
+    }
+  });
+
+  nextBtn.addEventListener('click', () => {
+    if (queueIndex < currentQueue.length - 1) {
+      queueIndex++;
+      updateQueueUI();
+      loadAndPlayCurrent();
+    }
+  });
+
+  prevBtn.addEventListener('click', () => {
+    if (queueIndex > 0) {
+      queueIndex--;
+      updateQueueUI();
+      loadAndPlayCurrent();
+    } else {
+      audio.currentTime = 0;
+    }
+  });
+
+  shuffleBtn.addEventListener('click', () => {
+    isShuffle = !isShuffle;
+    shuffleBtn.classList.toggle('active', isShuffle);
+    
+    if (isShuffle) {
+      if (currentQueue.length > 0) {
+        const current = currentQueue[queueIndex];
+        originalQueue = [...currentQueue];
+        const rest = currentQueue.filter((_, i) => i !== queueIndex);
+        rest.sort(() => Math.random() - 0.5);
+        currentQueue = [current, ...rest];
+        queueIndex = 0;
+      }
+    } else {
+      if (currentQueue.length > 0) {
+        const current = currentQueue[queueIndex];
+        currentQueue = [...originalQueue];
+        queueIndex = currentQueue.findIndex(s => s.id === current.id);
+      }
+    }
+    updateQueueUI();
+  });
+
+  playlistBtn.addEventListener('click', () => {
+    queuePanel.classList.toggle('hidden');
+  });
+
+  openBtn.addEventListener('click', () => {
+    if (queueIndex >= 0 && currentQueue.length > 0) {
+      const s = currentQueue[queueIndex];
+      window.location.href = `/track/#/${currentPluginId}/${s.id}`;
+    }
   });
 
   audio.addEventListener('timeupdate', () => {
@@ -207,15 +337,5 @@ function initPlayer() {
   function updateVolumeUI(pct) {
     volFill.style.height = `${pct * 100}%`;
     volThumb.style.bottom = `calc(${pct * 100}% - 8px)`;
-  }
-}
-
-function playSong(song) {
-  const audio = document.getElementById('audio-element');
-  const titleDisplay = document.getElementById('player-title');
-  if (audio && titleDisplay) {
-    audio.src = song.url;
-    titleDisplay.textContent = formatTitle(song.title);
-    audio.play();
   }
 }

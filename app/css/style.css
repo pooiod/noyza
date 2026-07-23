@@ -83,6 +83,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: var(--space-xl);
+  position: relative;
 }
 
 .player-container {
@@ -93,6 +94,8 @@ body {
   display: flex;
   flex-direction: column;
   justify-content: center;
+  position: relative;
+  z-index: 100;
 }
 
 .brand {
@@ -121,18 +124,6 @@ body {
 
 .nav-link:hover, .nav-link.active {
   color: var(--on-surface);
-}
-
-.icon {
-  width: 24px;
-  height: 24px;
-  background-color: currentColor;
-  -webkit-mask-size: contain;
-  -webkit-mask-repeat: no-repeat;
-  -webkit-mask-position: center;
-  mask-size: contain;
-  mask-repeat: no-repeat;
-  mask-position: center;
 }
 
 .music-grid {
@@ -212,7 +203,6 @@ body {
   cursor: pointer;
 }
 
-/* Player Styles exactly resembling the image layout */
 .player-inner {
   width: 100%;
   height: 100%;
@@ -243,6 +233,11 @@ body {
   height: 32px;
   width: auto;
   filter: var(--player-icon-filter, invert(0.8));
+  transition: filter 0.2s;
+}
+
+.btn-icon.active img {
+  filter: var(--player-icon-active-filter, invert(0.5) sepia(1) saturate(5) hue-rotate(180deg));
 }
 
 .player-title-display {
@@ -333,6 +328,67 @@ body {
   pointer-events: none;
 }
 
+.queue-panel {
+  position: absolute;
+  bottom: 140px;
+  right: var(--space-lg);
+  width: 320px;
+  max-height: 400px;
+  background-color: var(--surface);
+  border: 1px solid var(--outline);
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  z-index: 50;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+  transition: opacity 0.2s, transform 0.2s;
+}
+
+.queue-panel.hidden {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(10px);
+}
+
+.queue-header {
+  padding: var(--space-md);
+  border-bottom: 1px solid var(--outline);
+}
+
+.queue-list {
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-sm) 0;
+}
+
+.queue-item {
+  padding: var(--space-sm) var(--space-md);
+  cursor: pointer;
+  color: var(--on-surface-variant);
+  font-family: var(--font-body);
+  font-size: 14px;
+}
+
+.queue-item:hover {
+  background-color: var(--surface-container);
+}
+
+.queue-item.active {
+  background-color: var(--surface-container-high);
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
 @media (max-width: 768px) {
   .app-layout {
     grid-template-columns: 1fr;
@@ -343,5 +399,11 @@ body {
   }
   .sidebar-container {
     display: none;
+  }
+  .queue-panel {
+    bottom: 140px;
+    right: 0;
+    width: 100%;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
   }
 }
