@@ -80,18 +80,46 @@
 
         const dbName = 'AppFilesDB';
         const storeName = 'files';
-        const request = indexedDB.open(dbName, 1);
 
-        request.onupgradeneeded = (event) => {
-            const db = event.target.result;
-            if (!db.objectStoreNames.contains(storeName)) {
-                db.createObjectStore(storeName);
-            }
-        };
+        function getDatabase() {
+            return new Promise((resolve, reject) => {
+                const initialRequest = indexedDB.open(dbName);
+                
+                initialRequest.onupgradeneeded = (event) => {
+                    const db = event.target.result;
+                    if (!db.objectStoreNames.contains(storeName)) {
+                        db.createObjectStore(storeName);
+                    }
+                };
 
-        request.onsuccess = (event) => {
-            const db = event.target.result;
+                initialRequest.onsuccess = (event) => {
+                    let db = event.target.result;
+                    
+                    if (!db.objectStoreNames.contains(storeName)) {
+                        const nextVersion = db.version + 1;
+                        db.close();
+                        
+                        const upgradeRequest = indexedDB.open(dbName, nextVersion);
+                        
+                        upgradeRequest.onupgradeneeded = (e) => {
+                            const upgradeDb = e.target.result;
+                            if (!upgradeDb.objectStoreNames.contains(storeName)) {
+                                upgradeDb.createObjectStore(storeName);
+                            }
+                        };
+                        
+                        upgradeRequest.onsuccess = (e) => resolve(e.target.result);
+                        upgradeRequest.onerror = (e) => reject(e.target.error);
+                    } else {
+                        resolve(db);
+                    }
+                };
+                
+                initialRequest.onerror = (event) => reject(event.target.error);
+            });
+        }
 
+        getDatabase().then(db => {
             updateProgress('Downloading update...', 15);
 
             fetch(appurl)
@@ -158,11 +186,10 @@
                     updateProgress('Update failed.', 0);
                     console.error(error);
                 });
-        };
-
-        request.onerror = (event) => {
+        }).catch(error => {
             updateProgress('Database error.', 0);
-            console.error(event.target.error);
-        };
+            console.error(error);
+        });
     </script>
 </body>
+</html>
