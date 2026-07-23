@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Noyza</title>
+  <title>Loading...</title>
   <style>
     body, html {
       margin: 0;
@@ -148,8 +148,10 @@
     }
 
     let ok = false;
+    let hasError = false;
 
     function showError(msg) {
+      hasError = true;
       document.getElementById('loader-svg').style.display = 'none';
       document.getElementById('error-message').innerText = msg;
       document.getElementById('error-container').style.display = 'flex';
@@ -160,6 +162,12 @@
         showError("Unable to start service worker");
       }
     }, 1200);
+
+    setTimeout(() => {
+      if (!hasError) {
+        window.location.reload();
+      }
+    }, 10000);
 
     navigator.serviceWorker.register('/sw.js').then(r => {
       navigator.serviceWorker.ready.then(() => { ok = true; }).catch(err => {
