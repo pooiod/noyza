@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -156,7 +157,7 @@
         var root = "/noyza-main/app";
 
         if (navigator.storage && navigator.storage.persist) {
-            navigator.storage.persist();
+            navigator.storage.persist().catch(() => {});
         }
 
         const nDraw = document.getElementById('n-draw');
@@ -169,7 +170,9 @@
         let redirectTriggered = false;
 
         function updateProgress(percent) {
-            targetProgress = Math.max(0, Math.min(100, percent));
+            if (!isNaN(percent)) {
+                targetProgress = Math.max(0, Math.min(100, percent));
+            }
         }
 
         function redirect() {
@@ -228,6 +231,10 @@
                 initialRequest.onsuccess = (event) => {
                     let db = event.target.result;
                     
+                    db.onversionchange = () => {
+                        db.close();
+                    };
+
                     if (!db.objectStoreNames.contains(storeName)) {
                         const nextVersion = db.version + 1;
                         db.close();
@@ -241,27 +248,35 @@
                             }
                         };
                         
-                        upgradeRequest.onsuccess = (e) => resolve(e.target.result);
+                        upgradeRequest.onsuccess = (e) => {
+                            let upgradedDb = e.target.result;
+                            upgradedDb.onversionchange = () => {
+                                upgradedDb.close();
+                            };
+                            resolve(upgradedDb);
+                        };
                         upgradeRequest.onerror = (e) => reject(e.target.error);
+                        upgradeRequest.onblocked = () => reject(new Error("Database upgrade blocked. Please close other tabs of this app."));
                     } else {
                         resolve(db);
                     }
                 };
                 
                 initialRequest.onerror = (event) => reject(event.target.error);
+                initialRequest.onblocked = () => reject(new Error("Database open blocked. Please close other tabs of this app."));
             });
         }
 
         getDatabase().then(db => {
             updateProgress(0);
 
-            fetch(appurl)
+            fetch(appurl, { cache: 'no-store' })
                 .then(response => {
                     if (!response.ok) {
                         throw new Error(`Failed to fetch updates (${response.status} ${response.statusText})`);
                     }
                     const contentLength = response.headers.get('content-length');
-                    if (!contentLength) {
+                    if (!contentLength || !window.ReadableStream || !response.body) {
                         return response.blob().then(blob => {
                             updateProgress(90);
                             return blob;
@@ -272,22 +287,23 @@
                     const reader = response.body.getReader();
                     return new Response(
                         new ReadableStream({
-                            start(controller) {
-                                function read() {
-                                    reader.read().then(({ done, value }) => {
+                            async start(controller) {
+                                try {
+                                    while (true) {
+                                        const { done, value } = await reader.read();
                                         if (done) {
                                             controller.close();
-                                            return;
+                                            break;
                                         }
                                         loaded += value.byteLength;
-                                        updateProgress((loaded / total) * 90);
+                                        if (total > 0) {
+                                            updateProgress((loaded / total) * 90);
+                                        }
                                         controller.enqueue(value);
-                                        read();
-                                    }).catch(error => {
-                                        controller.error(error);
-                                    });
+                                    }
+                                } catch (error) {
+                                    controller.error(error);
                                 }
-                                read();
                             }
                         })
                     ).blob();
@@ -343,7 +359,7 @@
                 })
                 .then(() => {
                     if ('serviceWorker' in navigator) {
-                        return navigator.serviceWorker.register('/sw.js');
+                        navigator.serviceWorker.register('/sw.js').catch(err => console.warn("SW Registration failed:", err));
                     }
                 })
                 .then(() => {
