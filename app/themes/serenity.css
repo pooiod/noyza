@@ -13,7 +13,7 @@
   --on-primary: #ffffff;
   --background: #f8f9ff;
   --on-background: #0b1c30;
-  --player-icon-filter: invert(0.9);
+  --player-icon-filter: invert(1);
   --player-icon-active-filter: invert(0.5) sepia(1) saturate(5) hue-rotate(180deg);
 }
 
@@ -32,6 +32,6 @@
   --on-primary: #ffffff;
   --background: #0b1c30;
   --on-background: #eaf1ff;
-  --player-icon-filter: invert(0.9);
+  --player-icon-filter: none;
   --player-icon-active-filter: invert(0.5) sepia(1) saturate(5) hue-rotate(180deg);
 }
