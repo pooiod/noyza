@@ -47,6 +47,11 @@ async function getConfig() {
 async function checkHasFiles() {
     try {
         const db = await getDB();
+
+        if (!db.objectStoreNames.contains(storeName)) {
+            return false;
+        }
+
         return new Promise((resolve) => {
             const tx = db.transaction(storeName, 'readonly');
             const store = tx.objectStore(storeName);
