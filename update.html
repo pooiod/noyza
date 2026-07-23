@@ -4,62 +4,154 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Downloading update...</title>
+    <meta name="theme-color" content="#fff">
+    <title>Noyza - Updating</title>
+    
     <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+
     <style>
-        body {
+        body, html {
             margin: 0;
-            padding: 0;
-            background-color: #ffffff;
-            color: #1a1a1a;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            height: 100%;
             display: flex;
-            align-items: center;
             justify-content: center;
-            height: 100vh;
-        }
-
-        .loading-container {
-            text-align: center;
-            width: 85%;
-            max-width: 450px;
-        }
-
-        h1 {
-            font-size: 1.5rem;
-            margin-bottom: 0.5rem;
-            font-weight: 600;
-        }
-
-        #status-text {
-            color: #555555;
-            font-size: 0.95rem;
-            margin-bottom: 1.5rem;
-        }
-
-        .progress-bar {
-            width: 100%;
-            height: 8px;
-            background-color: #e5e5e5;
-            border-radius: 4px;
+            align-items: center;
+            background: #000000;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             overflow: hidden;
         }
 
-        #progress-fill {
-            height: 100%;
-            width: 0%;
-            background-color: #007aff;
-            transition: width 0.15s ease-out;
+        svg#loader-svg {
+            width: 200px;
+            height: 200px;
+            opacity: 0;
+            transform: scale(0.6) rotate(-30deg);
+            animation: enter 1.2s ease forwards;
+        }
+
+        path#n-draw {
+            stroke-dasharray: 280;
+            stroke-dashoffset: 280;
+            stroke-width: 10;
+            transition: stroke-dashoffset 0.3s ease-out;
+        }
+
+        circle#circle-loader {
+            stroke: url(#grad);
+            stroke-width: 8;
+            fill: none;
+            stroke-linecap: round;
+            transform-origin: 100px 100px;
+            animation: loaderSpin 2s linear infinite;
+        }
+
+        @keyframes enter {
+            to {
+                opacity: 1;
+                transform: scale(1) rotate(0deg);
+            }
+        }
+
+        @keyframes loaderSpin {
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        #n-circle {
+            fill: #1A1A1A;
+            stroke: #1A1A1A;
+        }
+
+        #error-container {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 20px;
+            max-width: 400px;
+            animation: enter 0.5s ease forwards;
+        }
+
+        .error-icon {
+            width: 64px;
+            height: 64px;
+            margin-bottom: 1.5rem;
+        }
+
+        #error-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #ff3d6d;
+        }
+
+        #error-message {
+            color: #aaaaaa;
+            font-size: 0.95rem;
+            line-height: 1.4;
+            margin-bottom: 1.5rem;
+            word-break: break-word;
+        }
+
+        .retry-btn {
+            background: linear-gradient(135deg, #ff3d6d 0%, #6a0dad 100%);
+            border: none;
+            color: white;
+            padding: 10px 24px;
+            font-size: 1rem;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.2s, opacity 0.2s;
+        }
+
+        .retry-btn:hover {
+            transform: scale(1.05);
+        }
+
+        .retry-btn:active {
+            transform: scale(0.98);
+        }
+
+        @media (prefers-color-scheme: light) {
+            body, html {
+                background: #ffffff;
+            }
+            #n-circle {
+                fill: #ffffff;
+                stroke: #e5e5e5;
+            }
+            #error-message {
+                color: #555555;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="loading-container">
-        <h1>Downloading update...</h1>
-        <p id="status-text">Connecting...</p>
-        <div class="progress-bar">
-            <div id="progress-fill"></div>
-        </div>
+    <svg id="loader-svg" width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+            <linearGradient id="grad" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#FF3D6D"/>
+                <stop offset="100%" stop-color="#6A0DAD"/>
+            </linearGradient>
+        </defs>
+        <circle cx="100" cy="100" r="80" id="n-circle" stroke-width="8"/>
+        <circle id="circle-loader" cx="100" cy="100" r="80"/>
+        <path id="n-draw" d="M60 140 L90 60 L110 130 L140 70" stroke="url(#grad)" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        <path d="M70 120 L120 120" stroke="url(#grad)" stroke-width="10" stroke-linecap="round"/>
+    </svg>
+
+    <div id="error-container">
+        <svg class="error-icon" viewBox="0 0 24 24" fill="none" stroke="#ff3d6d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="15" y1="9" x2="9" y2="15"></line>
+            <line x1="9" y1="9" x2="15" y2="15"></line>
+        </svg>
+        <div id="error-title">Update Failed</div>
+        <div id="error-message">An error occurred while downloading the update.</div>
+        <button class="retry-btn" onclick="window.location.reload()">Retry</button>
     </div>
 
     <script>
@@ -70,12 +162,22 @@
             navigator.storage.persist();
         }
 
-        const statusText = document.getElementById('status-text');
-        const progressFill = document.getElementById('progress-fill');
+        const nDraw = document.getElementById('n-draw');
+        const loaderSvg = document.getElementById('loader-svg');
+        const errorContainer = document.getElementById('error-container');
+        const errorMessage = document.getElementById('error-message');
 
-        function updateProgress(text, percent) {
-            statusText.innerText = text;
-            progressFill.style.width = percent + '%';
+        function updateProgress(percent) {
+            const clampedPercent = Math.max(0, Math.min(100, percent));
+            const totalOffset = 280;
+            const newOffset = totalOffset - (clampedPercent / 100) * totalOffset;
+            nDraw.style.strokeDashoffset = newOffset;
+        }
+
+        function showError(message) {
+            loaderSvg.style.display = 'none';
+            errorMessage.innerText = message;
+            errorContainer.style.display = 'flex';
         }
 
         const dbName = 'AppFilesDB';
@@ -120,11 +222,14 @@
         }
 
         getDatabase().then(db => {
-            updateProgress('Downloading update...', 15);
+            updateProgress(15);
 
             fetch(appurl)
                 .then(response => {
-                    updateProgress('Extracting contents...', 30);
+                    if (!response.ok) {
+                        throw new Error(`Failed to fetch updates (${response.status} ${response.statusText})`);
+                    }
+                    updateProgress(30);
                     return response.blob();
                 })
                 .then(blob => JSZip.loadAsync(blob))
@@ -147,6 +252,10 @@
                         }
                     });
 
+                    if (totalFiles === 0) {
+                        throw new Error("No files found to extract in the specified directory.");
+                    }
+
                     zip.forEach((relativePath, zipEntry) => {
                         if (!zipEntry.dir && (prefix === '' || relativePath.startsWith(prefix))) {
                             const savePath = prefix === '' ? relativePath : relativePath.substring(prefix.length);
@@ -160,7 +269,7 @@
                                     putRequest.onsuccess = () => {
                                         processedFiles++;
                                         const percent = 30 + Math.floor((processedFiles / totalFiles) * 65);
-                                        updateProgress(`Saving file ${processedFiles} of ${totalFiles}...`, percent);
+                                        updateProgress(percent);
                                         resolve();
                                     };
                                     putRequest.onerror = (e) => reject(e.target.error);
@@ -173,21 +282,25 @@
                     return Promise.all(filePromises);
                 })
                 .then(() => {
-                    updateProgress('Registering worker...', 98);
+                    updateProgress(98);
                     if ('serviceWorker' in navigator) {
                         return navigator.serviceWorker.register('/sw.js');
                     }
                 })
                 .then(() => {
-                    updateProgress('Starting app...', 100);
-                    window.location.href = '/';
+                    updateProgress(100);
+                    document.cookie = "doloaderanimation=true; max-age=10; path=/";
+
+                    window.location.href = '/'; 
                 })
                 .catch(error => {
-                    updateProgress('Update failed.', 0);
+                    updateProgress(0);
+                    showError(error.message || error);
                     console.error(error);
                 });
         }).catch(error => {
-            updateProgress('Database error.', 0);
+            updateProgress(0);
+            showError('Database error: ' + (error.message || error));
             console.error(error);
         });
     </script>
