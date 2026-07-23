@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -31,7 +30,6 @@
             stroke-dasharray: 280;
             stroke-dashoffset: 280;
             stroke-width: 10;
-            transition: stroke-dashoffset 0.3s ease-out;
         }
 
         circle#circle-loader {
@@ -166,12 +164,46 @@
         const errorContainer = document.getElementById('error-container');
         const errorMessage = document.getElementById('error-message');
 
+        let currentProgress = 0;
+        let targetProgress = 0;
+        let redirectTriggered = false;
+
         function updateProgress(percent) {
-            const clampedPercent = Math.max(0, Math.min(100, percent));
-            const totalOffset = 280;
-            const newOffset = totalOffset - (clampedPercent / 100) * totalOffset;
-            nDraw.style.strokeDashoffset = newOffset;
+            targetProgress = Math.max(0, Math.min(100, percent));
         }
+
+        function redirect() {
+            const url = '/?rand=' + Math.floor(Math.random() * 1000000);
+            if ('caches' in window) {
+                caches.keys().then(names => {
+                    return Promise.all(names.map(name => caches.delete(name)));
+                }).then(() => {
+                    window.location.href = url;
+                }).catch(() => {
+                    window.location.href = url;
+                });
+            } else {
+                window.location.href = url;
+            }
+        }
+
+        function animate() {
+            if (Math.abs(currentProgress - targetProgress) > 0.05) {
+                currentProgress += (targetProgress - currentProgress) * 0.05;
+                nDraw.style.strokeDashoffset = 280 - (currentProgress / 100) * 280;
+            } else if (currentProgress !== targetProgress) {
+                currentProgress = targetProgress;
+                nDraw.style.strokeDashoffset = 280 - (currentProgress / 100) * 280;
+            }
+
+            if (currentProgress >= 99.9 && !redirectTriggered) {
+                redirectTriggered = true;
+                setTimeout(redirect, 1000);
+            }
+
+            requestAnimationFrame(animate);
+        }
+        animate();
 
         function showError(message) {
             loaderSvg.style.display = 'none';
@@ -316,18 +348,6 @@
                 })
                 .then(() => {
                     updateProgress(100);
-                    setTimeout(() => {
-                        const redirect = () => {
-                            window.location.href = '/?rand=' + Math.floor(Math.random() * 1000000);
-                        };
-                        if ('caches' in window) {
-                            caches.keys().then(names => {
-                                return Promise.all(names.map(name => caches.delete(name)));
-                            }).then(redirect).catch(redirect);
-                        } else {
-                            redirect();
-                        }
-                    }, 1000);
                 })
                 .catch(error => {
                     updateProgress(0);
