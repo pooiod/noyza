@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Noyza - Settings</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;600;700&family=Plus+Jakarta+Sans:wght@700;800&family=Space+Mono:wght@700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css">
+<link id="theme-stylesheet" rel="stylesheet" href="/themes/serenity.css">
+</head>
+<body data-theme-mode="light">
+<div class="app-layout">
+  <aside class="sidebar-container">
+    {{/components/sidebar.html}}
+  </aside>
+  <main class="main-content">
+    <header class="top-header">
+      <h1 class="headline-md">Settings</h1>
+    </header>
+    <section class="settings-section">
+      <div class="settings-card bg-pastel-1">
+        <h2 class="title-sm">Appearance</h2>
+        <div class="settings-group">
+          <label class="label-caps" for="theme-select">Theme</label>
+          <select id="theme-select" class="custom-select">
+            <option value="serenity">Serenity</option>
+            <option value="midnight">Midnight</option>
+            <option value="forest">Forest</option>
+            <option value="sunset">Sunset</option>
+            <option value="ocean">Ocean</option>
+          </select>
+        </div>
+        <div class="settings-group">
+          <label class="label-caps" for="mode-select">Mode</label>
+          <select id="mode-select" class="custom-select">
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
+          </select>
+        </div>
+      </div>
+    </section>
+  </main>
+  <footer class="player-container">
+    {{/components/player.html}}
+  </footer>
+</div>
+<script src="/js/script.js"></script>
+</body>
+</html>

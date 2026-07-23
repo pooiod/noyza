@@ -3,30 +3,25 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Noyza - Structured Serenity</title>
+<title>Noyza - Home</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;600;700&family=Plus+Jakarta+Sans:wght@700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;600;700&family=Plus+Jakarta+Sans:wght@700;800&family=Space+Mono:wght@700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/css/style.css">
-<link id="theme-stylesheet" rel="stylesheet" href="/css/theme-light-1.css">
+<link id="theme-stylesheet" rel="stylesheet" href="/themes/serenity.css">
 </head>
-<body>
+<body data-theme-mode="light">
 <div class="app-layout">
   <aside class="sidebar-container">
     {{/components/sidebar.html}}
   </aside>
   <main class="main-content">
     <header class="top-header">
-      <h1 class="headline-md">Good Evening, Listener</h1>
-      <button id="theme-toggle" class="btn-secondary chip">
-        <div class="icon" style="-webkit-mask-image: url('/icons/theme.svg'); mask-image: url('/icons/theme.svg');"></div>
-        <span class="label-caps">Change Theme</span>
-      </button>
+      <h1 class="headline-md">Good Evening</h1>
     </header>
     <section class="library-section">
       <h2 class="title-sm section-title">Curated For You</h2>
-      <div class="music-grid">
-      </div>
+      <div class="music-grid"></div>
     </section>
   </main>
   <footer class="player-container">

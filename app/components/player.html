@@ -1,35 +1,42 @@
-<div class="now-playing">
-  <div class="player-art bg-pastel-3"></div>
-  <div class="player-track-info">
-    <span class="title-sm">Structured Serenity</span>
-    <span class="label-caps">Noyza Architecture</span>
-  </div>
-</div>
-<div class="player-controls">
-  <div class="control-buttons ghost-container">
-    <button class="btn-icon">
-      <div class="icon" style="-webkit-mask-image: url('/icons/skip-back.svg'); mask-image: url('/icons/skip-back.svg');"></div>
+<div class="player-inner">
+  <div class="player-top-row">
+    <button class="btn-icon" id="btn-open">
+      <img src="/assets/images/player/Open.svg" alt="Open">
     </button>
-    <button class="btn-primary play-btn">
-      <div class="icon icon-primary" style="-webkit-mask-image: url('/icons/play.svg'); mask-image: url('/icons/play.svg');"></div>
+    <button class="btn-icon" id="btn-prev">
+      <img src="/assets/images/player/Previous.svg" alt="Previous">
     </button>
-    <button class="btn-icon">
-      <div class="icon" style="-webkit-mask-image: url('/icons/skip-fwd.svg'); mask-image: url('/icons/skip-fwd.svg');"></div>
+    <button class="btn-icon" id="btn-play-pause">
+      <img src="/assets/images/player/Play.svg" alt="Play" id="icon-play">
     </button>
-  </div>
-  <div class="progress-container">
-    <span class="label-caps time-text">00:00</span>
-    <div class="progress-bar">
-      <div class="progress-fill" style="width: 0%"></div>
+    <button class="btn-icon" id="btn-next">
+      <img src="/assets/images/player/Next.svg" alt="Next">
+    </button>
+    <button class="btn-icon" id="btn-shuffle">
+      <img src="/assets/images/player/Shuffle.svg" alt="Shuffle">
+    </button>
+    
+    <div class="player-title-display">
+      <span id="player-title">[ N O N E ]</span>
     </div>
-    <span class="label-caps time-text">00:00</span>
+
+    <button class="btn-icon" id="btn-playlist">
+      <img src="/assets/images/player/Playlist.svg" alt="Playlist">
+    </button>
+
+    <div class="volume-slider-container">
+      <div class="volume-track" id="volume-track">
+        <div class="volume-fill" id="volume-fill"></div>
+        <img src="/assets/images/player/Thumb.svg" class="volume-thumb" id="volume-thumb" alt="Thumb">
+      </div>
+    </div>
   </div>
-</div>
-<div class="player-actions">
-  <div class="volume-container ghost-container">
-    <div class="icon" style="-webkit-mask-image: url('/icons/volume.svg'); mask-image: url('/icons/volume.svg');"></div>
-    <div class="progress-bar volume-bar">
-      <div class="progress-fill" style="width: 70%"></div>
+  
+  <div class="player-bottom-row">
+    <div class="progress-track" id="progress-track">
+      <div class="progress-fill" id="progress-fill"></div>
+      <img src="/assets/images/player/Thumb.svg" class="progress-thumb" id="progress-thumb" alt="Thumb">
     </div>
   </div>
 </div>
+<audio id="audio-element"></audio>
