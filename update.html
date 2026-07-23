@@ -5,10 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#fff">
-    <title>Noyza - Updating</title>
-    
+    <title>Noyza</title>
     <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
-
     <style>
         body, html {
             margin: 0;
@@ -130,6 +128,7 @@
     </style>
 </head>
 <body>
+
     <svg id="loader-svg" width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
         <defs>
             <linearGradient id="grad" x1="0" y1="0" x2="1" y2="1">
@@ -222,15 +221,44 @@
         }
 
         getDatabase().then(db => {
-            updateProgress(15);
+            updateProgress(0);
 
             fetch(appurl)
                 .then(response => {
                     if (!response.ok) {
                         throw new Error(`Failed to fetch updates (${response.status} ${response.statusText})`);
                     }
-                    updateProgress(30);
-                    return response.blob();
+                    const contentLength = response.headers.get('content-length');
+                    if (!contentLength) {
+                        return response.blob().then(blob => {
+                            updateProgress(90);
+                            return blob;
+                        });
+                    }
+                    const total = parseInt(contentLength, 10);
+                    let loaded = 0;
+                    const reader = response.body.getReader();
+                    return new Response(
+                        new ReadableStream({
+                            start(controller) {
+                                function read() {
+                                    reader.read().then(({ done, value }) => {
+                                        if (done) {
+                                            controller.close();
+                                            return;
+                                        }
+                                        loaded += value.byteLength;
+                                        updateProgress((loaded / total) * 90);
+                                        controller.enqueue(value);
+                                        read();
+                                    }).catch(error => {
+                                        controller.error(error);
+                                    });
+                                }
+                                read();
+                            }
+                        })
+                    ).blob();
                 })
                 .then(blob => JSZip.loadAsync(blob))
                 .then(zip => {
@@ -268,7 +296,7 @@
 
                                     putRequest.onsuccess = () => {
                                         processedFiles++;
-                                        const percent = 30 + Math.floor((processedFiles / totalFiles) * 65);
+                                        const percent = 90 + Math.floor((processedFiles / totalFiles) * 9);
                                         updateProgress(percent);
                                         resolve();
                                     };
@@ -282,16 +310,24 @@
                     return Promise.all(filePromises);
                 })
                 .then(() => {
-                    updateProgress(98);
                     if ('serviceWorker' in navigator) {
                         return navigator.serviceWorker.register('/sw.js');
                     }
                 })
                 .then(() => {
                     updateProgress(100);
-                    document.cookie = "doloaderanimation=true; max-age=10; path=/";
-
-                    window.location.href = '/'; 
+                    setTimeout(() => {
+                        const redirect = () => {
+                            window.location.href = '/?rand=' + Math.floor(Math.random() * 1000000);
+                        };
+                        if ('caches' in window) {
+                            caches.keys().then(names => {
+                                return Promise.all(names.map(name => caches.delete(name)));
+                            }).then(redirect).catch(redirect);
+                        } else {
+                            redirect();
+                        }
+                    }, 500);
                 })
                 .catch(error => {
                     updateProgress(0);
