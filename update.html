@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Downloading update...</title>
+    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #ffffff;
+            color: #1a1a1a;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+
+        .loading-container {
+            text-align: center;
+            width: 85%;
+            max-width: 450px;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+
+        #status-text {
+            color: #555555;
+            font-size: 0.95rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background-color: #e5e5e5;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        #progress-fill {
+            height: 100%;
+            width: 0%;
+            background-color: #007aff;
+            transition: width 0.15s ease-out;
+        }
+    </style>
+</head>
+<body>
+    <div class="loading-container">
+        <h1>Downloading update...</h1>
+        <p id="status-text">Connecting...</p>
+        <div class="progress-bar">
+            <div id="progress-fill"></div>
+        </div>
+    </div>
+
+    <script>
+        var appurl = "https://github.com/pooiod/noyza.git";
+        var root = "/noyza-main/app";
+
+        if (navigator.storage && navigator.storage.persist) {
+            navigator.storage.persist();
+        }
+
+        const statusText = document.getElementById('status-text');
+        const progressFill = document.getElementById('progress-fill');
+
+        function updateProgress(text, percent) {
+            statusText.innerText = text;
+            progressFill.style.width = percent + '%';
+        }
+
+        const dbName = 'AppFilesDB';
+        const storeName = 'files';
+        const request = indexedDB.open(dbName, 1);
+
+        request.onupgradeneeded = (event) => {
+            const db = event.target.result;
+            if (!db.objectStoreNames.contains(storeName)) {
+                db.createObjectStore(storeName);
+            }
+        };
+
+        request.onsuccess = (event) => {
+            const db = event.target.result;
+
+            updateProgress('Downloading update...', 15);
+
+            fetch(appurl)
+                .then(response => {
+                    updateProgress('Extracting contents...', 30);
+                    return response.blob();
+                })
+                .then(blob => JSZip.loadAsync(blob))
+                .then(zip => {
+                    const filePromises = [];
+                    let totalFiles = 0;
+                    let processedFiles = 0;
+
+                    let prefix = root;
+                    if (prefix.startsWith('/')) {
+                        prefix = prefix.substring(1);
+                    }
+                    if (prefix.length > 0 && !prefix.endsWith('/')) {
+                        prefix += '/';
+                    }
+
+                    zip.forEach((relativePath, zipEntry) => {
+                        if (!zipEntry.dir && (prefix === '' || relativePath.startsWith(prefix))) {
+                            totalFiles++;
+                        }
+                    });
+
+                    zip.forEach((relativePath, zipEntry) => {
+                        if (!zipEntry.dir && (prefix === '' || relativePath.startsWith(prefix))) {
+                            const savePath = prefix === '' ? relativePath : relativePath.substring(prefix.length);
+                            
+                            const promise = zipEntry.async('blob').then(content => {
+                                return new Promise((resolve, reject) => {
+                                    const transaction = db.transaction(storeName, 'readwrite');
+                                    const store = transaction.objectStore(storeName);
+                                    const putRequest = store.put(content, savePath);
+
+                                    putRequest.onsuccess = () => {
+                                        processedFiles++;
+                                        const percent = 30 + Math.floor((processedFiles / totalFiles) * 65);
+                                        updateProgress(`Saving file ${processedFiles} of ${totalFiles}...`, percent);
+                                        resolve();
+                                    };
+                                    putRequest.onerror = (e) => reject(e.target.error);
+                                });
+                            });
+                            filePromises.push(promise);
+                        }
+                    });
+
+                    return Promise.all(filePromises);
+                })
+                .then(() => {
+                    updateProgress('Registering worker...', 98);
+                    if ('serviceWorker' in navigator) {
+                        return navigator.serviceWorker.register('/sw.js');
+                    }
+                })
+                .then(() => {
+                    updateProgress('Starting app...', 100);
+                    window.location.href = '/';
+                })
+                .catch(error => {
+                    updateProgress('Update failed.', 0);
+                    console.error(error);
+                });
+        };
+
+        request.onerror = (event) => {
+            updateProgress('Database error.', 0);
+            console.error(event.target.error);
+        };
+    </script>
+</body>
+</html>
