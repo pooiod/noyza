@@ -18,20 +18,20 @@
     }
 
     svg#loader-svg {
-      width: 200px;
-      height: 200px;
+      width: 30px;
+      height: 30px;
       opacity: 0;
-      transform: scale(0.6) rotate(-30deg);
-      animation: enter 1.2s ease forwards;
+      transform: scale(0.1) rotate(-30deg);
+      animation: enter 1.2s ease 1s forwards;
     }
 
     circle#circle-loader {
       stroke: url(#grad);
-      stroke-width: 8;
+      stroke-width: 80;
       fill: none;
       stroke-linecap: round;
       transform-origin: 100px 100px;
-      animation: loaderSpin 2s linear infinite;
+      animation: loaderSpin 1s linear infinite;
     }
 
     @keyframes enter {
