@@ -16,15 +16,16 @@
     {{/components/sidebar.html}}
   </aside>
   <main class="main-content">
-    <header class="top-header">
-      <h1 class="headline-md">Discover</h1>
-    </header>
-    <div class="search-container">
-      <input type="text" id="search-input" class="custom-input" placeholder="Search tracks or from:artist...">
-      <button class="btn-primary" id="search-btn">Search</button>
+    <div class="discover-top-bar">
+      <div class="search-bar-container">
+        <input type="text" id="search-input" class="custom-input" placeholder="Search tracks or from:artist...">
+        <button class="btn-search-inner" id="search-btn">
+          <img src="/assets/images/player/Playlist.svg" alt="Search">
+        </button>
+      </div>
     </div>
     <section class="library-section">
-      <h2 class="title-sm section-title" id="search-title">Results</h2>
+      <h2 class="title-sm section-title" id="search-title">For You</h2>
       <div class="music-grid" id="search-results"></div>
     </section>
   </main>

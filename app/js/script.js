@@ -72,7 +72,7 @@ function getPlugin(id) {
 async function bootPlugins() {
   let plugins = JSON.parse(localStorage.getItem('noyza_installed_plugins') || '[]');
   if (plugins.length === 0) {
-    plugins = [{ url: '/plugins/ArchiveCH.js', code: '' }];
+    plugins = [{ url: '/plugins/ArchiveCH.js', code: '', id: 'ArchiveCH' }];
   }
   
   for (let i = 0; i < plugins.length; i++) {
@@ -200,8 +200,11 @@ async function initSearchPage() {
   const query = urlParams.get('q') || '';
   const input = document.getElementById('search-input');
   if (input) input.value = query;
+  
   if (query) {
     await performSearch(query);
+  } else {
+    await loadDiscoverDefault();
   }
   
   const searchBtn = document.getElementById('search-btn');
@@ -216,13 +219,64 @@ async function initSearchPage() {
   }
 }
 
+async function loadDiscoverDefault() {
+  const resultsGrid = document.getElementById('search-results');
+  const searchTitle = document.getElementById('search-title');
+  if (!resultsGrid) return;
+  resultsGrid.innerHTML = '';
+  if (searchTitle) searchTitle.textContent = 'For You';
+  
+  for (const plugin of window.Noyza.extensions.plugins) {
+    try {
+      const songs = await plugin.browse('foryou');
+      renderSongsToGrid(songs, resultsGrid, plugin.getInfo().id);
+    } catch (e) {}
+  }
+}
+
+function renderSongsToGrid(songs, grid, pluginId) {
+  songs.forEach((song, index) => {
+    const pastelClass = `bg-pastel-${(index % 4) + 1}`;
+    const card = document.createElement('div');
+    card.className = `album-card ${pastelClass}`;
+    
+    const art = document.createElement('div');
+    art.className = 'album-art';
+    art.style.backgroundImage = `url('${song.cover}')`;
+    
+    const info = document.createElement('div');
+    info.className = 'album-info';
+    
+    const title = document.createElement('h3');
+    title.className = 'title-sm';
+    title.textContent = song.title;
+    
+    const artist = document.createElement('a');
+    artist.className = 'artist-link label-caps';
+    artist.href = `/search.html?q=from:${encodeURIComponent(song.artist)}`;
+    artist.textContent = song.artist;
+    artist.addEventListener('click', (e) => e.stopPropagation());
+    
+    info.appendChild(title); info.appendChild(artist);
+    card.appendChild(art); card.appendChild(info);
+    
+    card.addEventListener('click', () => playQueue(songs, index, pluginId));
+    grid.appendChild(card);
+  });
+}
+
 async function performSearch(query) {
   const resultsGrid = document.getElementById('search-results');
+  const searchTitle = document.getElementById('search-title');
   if (!resultsGrid) return;
   resultsGrid.innerHTML = '';
   
   const isArtistQuery = query.startsWith('from:');
   const filterArtist = isArtistQuery ? query.substring(5).toLowerCase() : '';
+  
+  if (searchTitle) {
+    searchTitle.textContent = isArtistQuery ? `Tracks by ${query.substring(5)}` : `Search: ${query}`;
+  }
   
   for (const plugin of window.Noyza.extensions.plugins) {
     try {
@@ -233,35 +287,7 @@ async function performSearch(query) {
       } else {
         songs = await plugin.search(query);
       }
-      
-      songs.forEach((song, index) => {
-        const pastelClass = `bg-pastel-${(index % 4) + 1}`;
-        const card = document.createElement('div');
-        card.className = `album-card ${pastelClass}`;
-        
-        const art = document.createElement('div');
-        art.className = 'album-art';
-        art.style.backgroundImage = `url('${song.cover}')`;
-        
-        const info = document.createElement('div');
-        info.className = 'album-info';
-        
-        const title = document.createElement('h3');
-        title.className = 'title-sm';
-        title.textContent = song.title;
-        
-        const artist = document.createElement('a');
-        artist.className = 'artist-link label-caps';
-        artist.href = `/search.html?q=from:${encodeURIComponent(song.artist)}`;
-        artist.textContent = song.artist;
-        artist.addEventListener('click', (e) => e.stopPropagation());
-        
-        info.appendChild(title); info.appendChild(artist);
-        card.appendChild(art); card.appendChild(info);
-        
-        card.addEventListener('click', () => playQueue(songs, index, plugin.getInfo().id));
-        resultsGrid.appendChild(card);
-      });
+      renderSongsToGrid(songs, resultsGrid, plugin.getInfo().id);
     } catch (e) {}
   }
 }
@@ -282,20 +308,27 @@ function initSettingsPage() {
         if (res.ok) {
           const code = await res.text();
           
+          const beforeCount = window.Noyza.extensions.plugins.length;
           const script = document.createElement('script');
           script.textContent = code;
           document.head.appendChild(script);
+          const afterCount = window.Noyza.extensions.plugins.length;
+          
+          let newlyRegisteredId = "";
+          if (afterCount > beforeCount) {
+            newlyRegisteredId = window.Noyza.extensions.plugins[afterCount - 1].getInfo().id;
+          }
           
           let plugins = JSON.parse(localStorage.getItem('noyza_installed_plugins') || '[]');
           if (!plugins.some(p => p.url === url)) {
-            plugins.push({ url, code });
+            plugins.push({ url, code, id: newlyRegisteredId });
             localStorage.setItem('noyza_installed_plugins', JSON.stringify(plugins));
           }
           
           urlInput.value = '';
           renderPluginsList();
         } else {
-          alert("Failed to fetch plugin from URL.");
+          alert("Failed to fetch plugin.");
         }
       } catch (e) {
         alert("An error occurred while installing the plugin.");
@@ -314,13 +347,40 @@ function renderPluginsList() {
     const row = document.createElement('div');
     row.className = 'plugin-row';
     
+    const infoBlock = document.createElement('div');
+    infoBlock.className = 'plugin-info-block';
+    
+    if (info.icon) {
+      const iconImg = document.createElement('img');
+      iconImg.className = 'plugin-icon-img';
+      iconImg.src = info.icon;
+      infoBlock.appendChild(iconImg);
+    }
+    
     const nameSpan = document.createElement('span');
     nameSpan.className = 'body-md';
     nameSpan.textContent = `${info.name} (by ${info.author})`;
+    infoBlock.appendChild(nameSpan);
     
-    row.appendChild(nameSpan);
+    row.appendChild(infoBlock);
+    
+    const uninstallBtn = document.createElement('button');
+    uninstallBtn.className = 'btn-uninstall';
+    uninstallBtn.textContent = 'Uninstall';
+    uninstallBtn.addEventListener('click', () => {
+      uninstallPlugin(info.id);
+    });
+    row.appendChild(uninstallBtn);
+    
     container.appendChild(row);
   });
+}
+
+function uninstallPlugin(pluginId) {
+  let plugins = JSON.parse(localStorage.getItem('noyza_installed_plugins') || '[]');
+  plugins = plugins.filter(p => p.id !== pluginId && !p.url.includes(pluginId));
+  localStorage.setItem('noyza_installed_plugins', JSON.stringify(plugins));
+  window.location.reload();
 }
 
 async function checkForAppUpdates() {
@@ -354,7 +414,7 @@ function showUpdatePrompt() {
   btn.className = 'btn-primary';
   btn.textContent = 'Update Now';
   btn.addEventListener('click', () => {
-    window.location.href = '/update.html';
+    window.location.href = '/update';
   });
   
   card.appendChild(title);
