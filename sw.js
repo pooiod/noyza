@@ -200,33 +200,34 @@ self.addEventListener('fetch', (event) => {
     if (url.pathname === '/api/needs-update') {
         event.respondWith((async () => {
             try {
-                const config = await getConfig();
-                const res = await fetch(config.appurl, { method: 'HEAD', cache: 'no-store' });
-                const currentVersion = res.headers.get('ETag') || res.headers.get('Last-Modified') || res.headers.get('Content-Length');
-                const db = await getDB();
-                return new Promise((resolve) => {
-                    const tx = db.transaction(storeName, 'readonly');
-                    const store = tx.objectStore(storeName);
-                    const req = store.get('__meta_version__');
-                    req.onsuccess = async () => {
-                        let needsUpdate = false;
-                        if (req.result && currentVersion) {
-                            const storedVersion = await req.result.text();
-                            needsUpdate = (currentVersion !== storedVersion);
-                        } else if (!req.result && currentVersion) {
-                            needsUpdate = true;
-                        }
-                        resolve(new Response(JSON.stringify({ needsUpdate }), {
-                            status: 200,
-                            headers: { 'Content-Type': 'application/json' }
-                        }));
-                    };
-                    req.onerror = () => resolve(new Response('{"needsUpdate":false}'));
+                const res = await fetch("https://api.github.com/repos/pooiod/noyza/commits?per_page=1", {
+                    cache: "no-store"
                 });
-            } catch (e) {
+
+                if (!res.ok) {
+                    throw new Error("GitHub API error");
+                }
+
+                const [commit] = await res.json();
+                const latestCommit = commit.commit.committer.date;
+
+                const stored = localStorage.getItem("noyza_last_commit");
+                const needsUpdate = !stored || new Date(latestCommit) > new Date(stored);
+
+                localStorage.setItem("noyza_last_commit", latestCommit);
+
+                return new Response(JSON.stringify({ needsUpdate }), {
+                    status: 200,
+                    headers: {
+                        "Content-Type": "application/json"
+                    }
+                });
+            } catch {
                 return new Response(JSON.stringify({ needsUpdate: false }), {
                     status: 200,
-                    headers: { 'Content-Type': 'application/json' }
+                    headers: {
+                        "Content-Type": "application/json"
+                    }
                 });
             }
         })());
