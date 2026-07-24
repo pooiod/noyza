@@ -6,30 +6,24 @@ window.Noyza = {
   }
 };
 
-let accountData = {
-  theme: 'serenity',
-  mode: 'system',
-  volume: 1.0
-};
-
+let accountData = { theme: 'serenity', mode: 'system', volume: 1.0 };
+let playerState = { queue: [], originalQueue: [], index: -1, shuffle: false, pluginId: "", isPlaying: false, currentTime: 0 };
 let currentQueue = [];
 let originalQueue = [];
 let queueIndex = -1;
 let isShuffle = false;
 let currentPluginId = "";
 let isPlaying = false;
+let downloadTimer = null;
+let lastSaveTime = 0;
 
 async function loadAccount() {
   const local = localStorage.getItem('noyza_account');
-  if (local) {
-    accountData = JSON.parse(local);
-  } else {
+  if (local) accountData = JSON.parse(local);
+  else {
     try {
       const res = await fetch('/data/account.json');
-      if (res.ok) {
-        accountData = await res.json();
-        saveAccount();
-      }
+      if (res.ok) { accountData = await res.json(); saveAccount(); }
     } catch (e) {}
   }
   applyTheme();
@@ -39,14 +33,21 @@ function saveAccount() {
   localStorage.setItem('noyza_account', JSON.stringify(accountData));
 }
 
+function savePlayerState() {
+  playerState.queue = currentQueue;
+  playerState.originalQueue = originalQueue;
+  playerState.index = queueIndex;
+  playerState.shuffle = isShuffle;
+  playerState.pluginId = currentPluginId;
+  playerState.isPlaying = isPlaying;
+  localStorage.setItem('noyza_player_state', JSON.stringify(playerState));
+}
+
 function applyTheme() {
   const link = document.getElementById('theme-stylesheet');
   if (link) link.href = `/themes/${accountData.theme}.css`;
-
   let mode = accountData.mode;
-  if (mode === 'system') {
-    mode = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-  }
+  if (mode === 'system') mode = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
   document.body.setAttribute('data-theme-mode', mode);
 }
 
@@ -54,57 +55,46 @@ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () 
   if (accountData.mode === 'system') applyTheme();
 });
 
-function formatTitle(title) {
-  const stripped = title.toUpperCase().replace(/\s+/g, '');
-  return `[ ${stripped.split('').join(' ')} ]`;
-}
-
 function getPlugin(id) {
   return window.Noyza.extensions.plugins.find(p => p.getInfo().id === id);
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
   await loadAccount();
+  initUIBindings();
 
+  if (window.location.pathname.includes('track.html')) {
+    renderTrackPage();
+  } else {
+    initSections();
+  }
+
+  await restoreSession();
+  initPlayer();
+});
+
+function initUIBindings() {
   const currentPath = window.location.pathname;
   const navHome = document.getElementById('nav-home');
   const navSettings = document.getElementById('nav-settings');
-  if (currentPath.includes('settings.html') && navSettings) {
-    navSettings.classList.add('active');
-  } else if (navHome) {
-    navHome.classList.add('active');
-  }
+  if (currentPath.includes('settings.html') && navSettings) navSettings.classList.add('active');
+  else if (!currentPath.includes('track.html') && navHome) navHome.classList.add('active');
 
   const themeSelect = document.getElementById('theme-select');
   const modeSelect = document.getElementById('mode-select');
-
   if (themeSelect && modeSelect) {
     themeSelect.value = accountData.theme;
     modeSelect.value = accountData.mode;
-
-    themeSelect.addEventListener('change', (e) => {
-      accountData.theme = e.target.value;
-      saveAccount();
-      applyTheme();
-    });
-
-    modeSelect.addEventListener('change', (e) => {
-      accountData.mode = e.target.value;
-      saveAccount();
-      applyTheme();
-    });
+    themeSelect.addEventListener('change', (e) => { accountData.theme = e.target.value; saveAccount(); applyTheme(); });
+    modeSelect.addEventListener('change', (e) => { accountData.mode = e.target.value; saveAccount(); applyTheme(); });
   }
+}
 
-  const sections = [
-    { id: 'grid-foryou', type: 'foryou' },
-    { id: 'grid-trending', type: 'trending' },
-    { id: 'grid-latest', type: 'latest' }
-  ];
-
+async function initSections() {
+  const sections = [ { id: 'grid-foryou', type: 'foryou' }, { id: 'grid-trending', type: 'trending' }, { id: 'grid-latest', type: 'latest' } ];
   for (const sec of sections) {
     const grid = document.getElementById(sec.id);
     if (!grid) continue;
-
     const wrapper = grid.parentElement;
     const leftBtn = wrapper.querySelector('.btn-scroll-left');
     const rightBtn = wrapper.querySelector('.btn-scroll-right');
@@ -123,7 +113,6 @@ document.addEventListener("DOMContentLoaded", async () => {
           const art = document.createElement('div');
           art.className = 'album-art';
           art.style.backgroundImage = `url('${song.cover}')`;
-          art.style.backgroundSize = 'cover';
           
           const info = document.createElement('div');
           info.className = 'album-info';
@@ -136,22 +125,105 @@ document.addEventListener("DOMContentLoaded", async () => {
           artist.className = 'label-caps';
           artist.textContent = song.artist;
           
-          info.appendChild(title);
-          info.appendChild(artist);
-          card.appendChild(art);
-          card.appendChild(info);
+          info.appendChild(title); info.appendChild(artist);
+          card.appendChild(art); card.appendChild(info);
           
-          card.addEventListener('click', () => {
-            playQueue(songs, index, plugin.getInfo().id);
-          });
+          card.addEventListener('click', () => playQueue(songs, index, plugin.getInfo().id));
           grid.appendChild(card);
         });
       } catch (err) {}
     }
   }
+}
 
-  initPlayer();
-});
+async function renderTrackPage() {
+  const hash = window.location.hash; 
+  if(!hash.startsWith('#/')) return;
+  const parts = hash.split('/');
+  if(parts.length < 3) return;
+  
+  const pluginId = parts[1];
+  const trackId = parts[2];
+  const plugin = getPlugin(pluginId);
+  if(!plugin) return;
+  if(plugin.init) await plugin.init();
+  
+  try {
+    const meta = await plugin.getSongMeta(trackId);
+    const coverEl = document.getElementById('track-cover');
+    const titleEl = document.getElementById('track-title');
+    const artistEl = document.getElementById('track-artist');
+    const descEl = document.getElementById('track-desc');
+    const playBtn = document.getElementById('track-play-btn');
+    
+    if(coverEl) coverEl.style.backgroundImage = `url('${meta.cover}')`;
+    if(titleEl) titleEl.textContent = meta.title;
+    if(artistEl) artistEl.textContent = meta.artist;
+    if(descEl) descEl.textContent = meta.desc;
+    
+    if(playBtn) {
+      playBtn.addEventListener('click', () => {
+        playQueue([meta], 0, pluginId);
+      });
+    }
+  } catch(e) {}
+}
+
+async function restoreSession() {
+  const saved = localStorage.getItem('noyza_player_state');
+  if (saved) {
+    try {
+      const parsed = JSON.parse(saved);
+      playerState = { ...playerState, ...parsed };
+      currentQueue = playerState.queue || [];
+      originalQueue = playerState.originalQueue || [];
+      queueIndex = playerState.index;
+      isShuffle = playerState.shuffle;
+      currentPluginId = playerState.pluginId;
+      isPlaying = playerState.isPlaying;
+      
+      const shuffleBtn = document.getElementById('btn-shuffle');
+      if (isShuffle && shuffleBtn) shuffleBtn.classList.add('active');
+
+      if (currentQueue.length > 0 && queueIndex >= 0) {
+        updateQueueUI();
+        const plugin = getPlugin(currentPluginId);
+        if (plugin) {
+          const baseSong = currentQueue[queueIndex];
+          try {
+            const fullSong = await plugin.getSong(baseSong.id);
+            const audio = document.getElementById('audio-element');
+            const titleDisplay = document.getElementById('player-title');
+            const playerArt = document.getElementById('player-art');
+            
+            if (audio && titleDisplay) {
+              audio.src = fullSong.url;
+              titleDisplay.textContent = fullSong.title;
+              if (playerArt) {
+                playerArt.src = fullSong.cover;
+                playerArt.style.display = 'block';
+              }
+              audio.currentTime = playerState.currentTime || 0;
+              
+              if (isPlaying) {
+                const playPromise = audio.play();
+                if (playPromise !== undefined) {
+                  playPromise.catch(() => {
+                    isPlaying = false;
+                    setPlayIconState('paused');
+                  });
+                }
+              }
+
+              clearTimeout(downloadTimer);
+              pollDownloadProgress();
+            }
+          } catch(e) {}
+        }
+      }
+    } catch (e) {}
+  }
+}
 
 function setPlayIconState(state) {
   const icon = document.getElementById('icon-play');
@@ -198,19 +270,44 @@ async function loadAndPlayCurrent() {
     const audio = document.getElementById('audio-element');
     const titleDisplay = document.getElementById('player-title');
     const playerArt = document.getElementById('player-art');
+    const dlFill = document.getElementById('download-fill');
     
     if (audio && titleDisplay) {
       audio.src = fullSong.url;
-      titleDisplay.textContent = formatTitle(fullSong.title);
+      titleDisplay.textContent = fullSong.title;
       if (playerArt) {
         playerArt.src = fullSong.cover;
         playerArt.style.display = 'block';
       }
-      audio.play();
+      if (dlFill) dlFill.style.width = `${fullSong.downloadProgress !== undefined ? fullSong.downloadProgress : 100}%`;
+      
+      audio.play().then(() => { isPlaying = true; savePlayerState(); }).catch(()=>{});
     }
+
+    clearTimeout(downloadTimer);
+    pollDownloadProgress();
+    savePlayerState();
   } catch (err) {
     setPlayIconState('paused');
   }
+}
+
+async function pollDownloadProgress() {
+  if (queueIndex < 0 || queueIndex >= currentQueue.length) return;
+  const plugin = getPlugin(currentPluginId);
+  if (!plugin || !plugin.updateTrack) return;
+
+  const baseSong = currentQueue[queueIndex];
+  try {
+    const updated = await plugin.updateTrack(baseSong.id);
+    const dlProgress = updated.downloadProgress !== undefined ? updated.downloadProgress : 100;
+    const dlFill = document.getElementById('download-fill');
+    if (dlFill) dlFill.style.width = `${dlProgress}%`;
+    if (dlProgress < 100) {
+      clearTimeout(downloadTimer);
+      downloadTimer = setTimeout(pollDownloadProgress, 1000);
+    }
+  } catch (e) {}
 }
 
 function updateQueueUI() {
@@ -254,22 +351,13 @@ function initPlayer() {
 
   playBtn.addEventListener('click', () => {
     if (audio.src) {
-      if (isPlaying) {
-        audio.pause();
-      } else {
-        audio.play();
-      }
+      if (isPlaying) { audio.pause(); } else { audio.play(); }
     }
   });
 
-  audio.addEventListener('loadstart', () => {
-    if (audio.src) setPlayIconState('loading');
-  });
-
-  audio.addEventListener('waiting', () => {
-    setPlayIconState('loading');
-  });
-
+  audio.addEventListener('loadstart', () => { if (audio.src) setPlayIconState('loading'); });
+  audio.addEventListener('waiting', () => setPlayIconState('loading'));
+  
   audio.addEventListener('canplay', () => {
     if (isPlaying) setPlayIconState('playing');
     else setPlayIconState('paused');
@@ -278,11 +366,13 @@ function initPlayer() {
   audio.addEventListener('play', () => {
     isPlaying = true;
     setPlayIconState('playing');
+    savePlayerState();
   });
 
   audio.addEventListener('pause', () => {
     isPlaying = false;
     setPlayIconState('paused');
+    savePlayerState();
   });
   
   audio.addEventListener('ended', () => {
@@ -332,6 +422,7 @@ function initPlayer() {
       }
     }
     updateQueueUI();
+    savePlayerState();
   });
 
   playlistBtn.addEventListener('click', () => {
@@ -341,7 +432,7 @@ function initPlayer() {
   openBtn.addEventListener('click', () => {
     if (queueIndex >= 0 && currentQueue.length > 0) {
       const s = currentQueue[queueIndex];
-      window.location.href = `/track/#/${currentPluginId}/${s.id}`;
+      window.location.href = `/track.html#/${currentPluginId}/${s.id}`;
     }
   });
 
@@ -349,6 +440,12 @@ function initPlayer() {
     if (!isDraggingProgress && audio.duration) {
       const pct = audio.currentTime / audio.duration;
       updateProgressUI(pct);
+    }
+    playerState.currentTime = audio.currentTime;
+    const now = Date.now();
+    if (now - lastSaveTime > 1000) {
+      savePlayerState();
+      lastSaveTime = now;
     }
   });
 
@@ -371,12 +468,14 @@ function initPlayer() {
     updateProgressUI(pct);
     if (audio.duration) {
       audio.currentTime = pct * audio.duration;
+      playerState.currentTime = audio.currentTime;
+      savePlayerState();
     }
   }
 
   function updateProgressUI(pct) {
     progFill.style.width = `${pct * 100}%`;
-    progThumb.style.left = `calc(${pct * 100}% - 10px)`;
+    progThumb.style.left = `calc(${pct * 100}% - 12px)`;
   }
 
   let isDraggingVol = false;
@@ -403,6 +502,6 @@ function initPlayer() {
 
   function updateVolumeUI(pct) {
     volFill.style.height = `${pct * 100}%`;
-    volThumb.style.bottom = `calc(${pct * 100}% - 10px)`;
+    volThumb.style.bottom = `calc(${pct * 100}% - 12px)`;
   }
 }

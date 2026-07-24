@@ -18,11 +18,7 @@
   --gutter: 20px;
 }
 
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
+* { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
   background-color: var(--background);
@@ -59,9 +55,7 @@ body {
   display: grid;
   grid-template-columns: 260px 1fr;
   grid-template-rows: 1fr 110px;
-  grid-template-areas: 
-    "sidebar main"
-    "player player";
+  grid-template-areas: "sidebar main" "player player";
   height: 100vh;
 }
 
@@ -144,9 +138,7 @@ body {
   width: 100%;
 }
 
-.music-grid::-webkit-scrollbar {
-  display: none;
-}
+.music-grid::-webkit-scrollbar { display: none; }
 
 .album-card {
   flex: 0 0 220px;
@@ -160,9 +152,7 @@ body {
   transition: transform 0.2s;
 }
 
-.album-card:hover {
-  transform: translateY(-2px);
-}
+.album-card:hover { transform: translateY(-2px); }
 
 .album-card::before {
   content: "";
@@ -197,16 +187,8 @@ body {
   transition: background-color 0.2s;
 }
 
-.btn-scroll:hover {
-  background: var(--surface-container-highest);
-}
-
-.btn-scroll img {
-  width: 20px;
-  height: 20px;
-  filter: var(--player-icon-filter);
-}
-
+.btn-scroll:hover { background: var(--surface-container-highest); }
+.btn-scroll img { width: 20px; height: 20px; filter: var(--player-icon-filter); }
 .btn-scroll-left { left: -18px; }
 .btn-scroll-right { right: -18px; }
 
@@ -215,45 +197,17 @@ body {
 .bg-pastel-3 { background-color: var(--surface-container-high); }
 .bg-pastel-4 { background-color: var(--surface-container-highest); }
 
-.settings-section {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-md);
-}
-
-.settings-card {
-  border-radius: var(--radius-lg);
-  padding: var(--space-lg);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-lg);
-  border: 1px solid var(--outline);
-  max-width: 600px;
-}
-
-.settings-group {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
-}
-
-.custom-select {
-  padding: var(--space-sm);
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--outline);
-  background: var(--surface);
-  color: var(--on-surface);
-  font-family: var(--font-body);
-  font-size: 16px;
-  cursor: pointer;
-}
+.settings-section { display: flex; flex-direction: column; gap: var(--space-md); }
+.settings-card { border-radius: var(--radius-lg); padding: var(--space-lg); display: flex; flex-direction: column; gap: var(--space-lg); border: 1px solid var(--outline); max-width: 600px; }
+.settings-group { display: flex; flex-direction: column; gap: var(--space-xs); }
+.custom-select { padding: var(--space-sm); border-radius: var(--radius-sm); border: 1px solid var(--outline); background: var(--surface); color: var(--on-surface); font-family: var(--font-body); font-size: 16px; cursor: pointer; }
 
 .player-inner {
   width: 100%;
   height: 100%;
   display: flex;
   flex-direction: column;
-  padding: var(--space-sm) var(--space-lg);
+  padding: var(--space-sm) var(--space-lg) var(--space-xs);
   gap: 8px;
 }
 
@@ -281,9 +235,10 @@ body {
   transition: filter 0.2s;
 }
 
-.btn-icon.active img {
-  filter: var(--player-icon-active-filter);
-}
+.btn-icon.active img { filter: var(--player-icon-active-filter); }
+
+.icon-force-light { filter: none !important; }
+.icon-force-dark { filter: invert(1) !important; }
 
 .player-art-btn {
   width: 44px;
@@ -314,10 +269,10 @@ body {
 }
 
 #player-title {
-  font-family: var(--font-mono);
-  font-size: 18px;
+  font-family: var(--font-body);
+  font-size: 16px;
+  font-weight: 600;
   color: var(--on-surface);
-  letter-spacing: 2px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -354,12 +309,12 @@ body {
 
 .volume-thumb {
   position: absolute;
-  bottom: calc(70% - 10px);
-  left: -8px;
-  width: 20px;
-  height: 20px;
+  bottom: calc(70% - 12px);
+  left: -10px;
+  width: 24px;
+  height: 24px;
   pointer-events: none;
-  filter: var(--player-icon-filter);
+  filter: var(--player-thumb-filter, var(--player-icon-filter));
 }
 
 .player-bottom-row {
@@ -378,22 +333,40 @@ body {
   cursor: pointer;
 }
 
+.download-fill {
+  width: 0%;
+  height: 100%;
+  background-color: var(--outline-variant);
+  border-radius: 3px;
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  z-index: 1;
+  transition: width 0.3s linear;
+}
+
 .progress-fill {
   width: 0%;
   height: 100%;
   background-color: var(--primary);
   border-radius: 3px;
+  position: absolute;
+  top: 0;
+  left: 0;
   pointer-events: none;
+  z-index: 2;
 }
 
 .progress-thumb {
   position: absolute;
-  top: -7px;
-  left: -10px;
-  width: 20px;
-  height: 20px;
+  top: -9px;
+  left: -12px;
+  width: 24px;
+  height: 24px;
   pointer-events: none;
-  filter: var(--player-icon-filter);
+  filter: var(--player-thumb-filter, var(--player-icon-filter));
+  z-index: 3;
 }
 
 .queue-panel {
@@ -412,69 +385,44 @@ body {
   transition: opacity 0.2s, transform 0.2s;
 }
 
-.queue-panel.hidden {
-  opacity: 0;
-  pointer-events: none;
-  transform: translateY(10px);
-}
+.queue-panel.hidden { opacity: 0; pointer-events: none; transform: translateY(10px); }
 
 .queue-header {
   padding: var(--space-md);
-  background-color: var(--surface-container);
+  background-color: var(--surface-container-high);
   border-bottom: 1px solid var(--outline);
   border-radius: var(--radius-lg) var(--radius-lg) 0 0;
   color: var(--on-surface);
 }
 
-.queue-list {
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  padding: var(--space-sm) 0;
-}
+.queue-list { overflow-y: auto; display: flex; flex-direction: column; padding: var(--space-sm) 0; }
+.queue-item { padding: var(--space-sm) var(--space-md); cursor: pointer; color: var(--on-surface-variant); font-family: var(--font-body); font-size: 14px; }
+.queue-item:hover { background-color: var(--surface-container); }
+.queue-item.active { background-color: var(--surface-container-highest); color: var(--primary); font-weight: 700; }
 
-.queue-item {
-  padding: var(--space-sm) var(--space-md);
-  cursor: pointer;
-  color: var(--on-surface-variant);
-  font-family: var(--font-body);
-  font-size: 14px;
-}
+.spinner { animation: spin 1s linear infinite; }
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
-.queue-item:hover {
-  background-color: var(--surface-container);
+/* Track Details Page */
+.track-hero { display: flex; gap: var(--space-xl); align-items: flex-end; margin-top: var(--space-md); }
+.track-cover-large {
+  width: 240px; height: 240px; border-radius: var(--radius-lg);
+  background-color: var(--surface-container-highest); border: 1px solid var(--outline);
+  background-size: cover; background-position: center; flex-shrink: 0; box-shadow: 0 10px 30px rgba(0,0,0,0.1);
 }
-
-.queue-item.active {
-  background-color: var(--surface-container-high);
-  color: var(--primary);
-  font-weight: 700;
+.track-info-large { display: flex; flex-direction: column; gap: var(--space-sm); flex: 1; margin-bottom: var(--space-sm); }
+.track-artist { color: var(--primary); font-size: 18px; }
+.track-desc { color: var(--on-surface-variant); max-width: 600px; line-height: 1.6; margin-top: var(--space-sm); }
+.btn-primary {
+  background-color: var(--primary); color: var(--on-primary); border-radius: var(--radius-full);
+  padding: 0 var(--space-lg); height: 48px; font-weight: 700; border: 2px solid var(--primary);
+  display: inline-flex; align-items: center; justify-content: center; cursor: pointer; transition: background-color 0.2s;
 }
-
-.spinner {
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
+.btn-primary:hover { background-color: var(--primary-container); border-color: var(--primary-container); }
 
 @media (max-width: 768px) {
-  .app-layout {
-    grid-template-columns: 1fr;
-    grid-template-rows: 1fr 110px;
-    grid-template-areas: 
-      "main"
-      "player";
-  }
-  .sidebar-container {
-    display: none;
-  }
-  .queue-panel {
-    bottom: 110px;
-    right: 0;
-    width: 100%;
-    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-  }
+  .app-layout { grid-template-columns: 1fr; grid-template-rows: 1fr 110px; grid-template-areas: "main" "player"; }
+  .sidebar-container { display: none; }
+  .queue-panel { bottom: 110px; right: 0; width: 100%; border-radius: var(--radius-lg) var(--radius-lg) 0 0; }
+  .track-hero { flex-direction: column; align-items: flex-start; }
 }

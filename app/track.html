@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Noyza - Track</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;600;700&family=Plus+Jakarta+Sans:wght@700;800&family=Space+Mono:wght@700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css">
+<link id="theme-stylesheet" rel="stylesheet" href="/themes/serenity.css">
+</head>
+<body data-theme-mode="light">
+<div class="app-layout">
+  <aside class="sidebar-container">
+    {{/components/sidebar.html}}
+  </aside>
+  <main class="main-content">
+    <header class="top-header">
+      <h1 class="headline-md">Track Details</h1>
+    </header>
+    <section class="track-hero" id="track-hero-section">
+      <div class="track-cover-large" id="track-cover"></div>
+      <div class="track-info-large">
+        <h2 class="display-lg-mobile" id="track-title">Loading...</h2>
+        <p class="title-sm track-artist" id="track-artist"></p>
+        <p class="body-md track-desc" id="track-desc"></p>
+        <div style="margin-top: 16px;">
+          <button class="btn-primary" id="track-play-btn">
+             <img src="/assets/images/player/Play.svg" class="icon-force-light" alt="Play" style="width: 24px; height: 24px; margin-right: 8px;"> Play Track
+          </button>
+        </div>
+      </div>
+    </section>
+  </main>
+  <footer class="player-container">
+    {{/components/player.html}}
+  </footer>
+</div>
+<script src="/js/script.js"></script>
+<script src="/plugins/ArchiveCH.js"></script>
+</body>
+</html>

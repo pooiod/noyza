@@ -15,6 +15,10 @@
 
         async init() {}
 
+        async updateTrack(id) {
+            return getSong(id);
+        }
+
         async getSong(id) {
             const response = await fetch("https://pooiod.github.io/ChMusicArchive/songs.json");
             if (!response.ok) {
@@ -31,9 +35,35 @@
                 id: song.title.replace(/\s+/g, "_").toLowerCase(),
                 title: song.title,
                 artist: "CH__",
+                desc: `This song was made by CH__ and is from the CH Music Archive.`,
                 cover: "https://pooiod.github.io/ChMusicArchive/cover.webp",
                 source: "https://pooiod.github.io/ChMusicArchive",
-                url: "https://pooiod.github.io/ChMusicArchive/music/" + song.file
+                originPage: null,
+                url: "https://pooiod.github.io/ChMusicArchive/music/" + song.file,
+                downloadProgress: 100,
+            };
+        }
+
+        async getSongMeta(id) {
+            const response = await fetch("https://pooiod.github.io/ChMusicArchive/songs.json");
+            if (!response.ok) {
+                throw new Error("Failed to fetch data from CH Archive");
+            }
+
+            const data = await response.json();
+            const song = data.find(song => song.title.replace(/\s+/g, "_").toLowerCase() === id);
+            if (!song) {
+                throw new Error("Song not found in CH Archive");
+            }
+
+            return {
+                id: song.title.replace(/\s+/g, "_").toLowerCase(),
+                title: song.title,
+                artist: "CH__",
+                desc: `This song was made by CH__ and is from the CH Music Archive.`,
+                cover: "https://pooiod.github.io/ChMusicArchive/cover.webp",
+                source: "https://pooiod.github.io/ChMusicArchive",
+                originPage: null
             };
         }
 

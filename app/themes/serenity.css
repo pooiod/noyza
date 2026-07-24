@@ -9,12 +9,15 @@
   --inverse-surface: #4a4a4a;
   --inverse-on-surface: #eaf1ff;
   --outline: rgba(15, 23, 42, 0.15);
+  --outline-variant: rgba(15, 23, 42, 0.05);
   --primary: #00a8ff;
   --on-primary: #ffffff;
+  --primary-container: #008ece;
   --background: #f8f9ff;
   --on-background: #0b1c30;
   --player-icon-filter: invert(1);
   --player-icon-active-filter: invert(0.5) sepia(1) saturate(5) hue-rotate(180deg);
+  --player-thumb-filter: none;
 }
 
 [data-theme-mode="dark"] {
@@ -28,10 +31,13 @@
   --inverse-surface: #1e1e1e;
   --inverse-on-surface: #ffffff;
   --outline: rgba(255, 255, 255, 0.2);
+  --outline-variant: rgba(255, 255, 255, 0.1);
   --primary: #00a8ff;
   --on-primary: #ffffff;
+  --primary-container: #008ece;
   --background: #0b1c30;
   --on-background: #eaf1ff;
   --player-icon-filter: none;
   --player-icon-active-filter: invert(0.5) sepia(1) saturate(5) hue-rotate(180deg);
+  --player-thumb-filter: none;
 }
