@@ -6,23 +6,23 @@ window.Noyza = {
   }
 };
 
-let accountData = { theme: 'serenity', mode: 'system', volume: 1.0, updateChecking: true, offlineCache: 30, topSongsCache: 5 };
-let playerState = { queue: [], originalQueue: [], index: -1, autoplayMode: 'shuffle', pluginId: "", isPlaying: false, currentTime: 0 };
-let currentQueue = [];
-let originalQueue = [];
-let queueIndex = -1;
-let autoplayMode = 'shuffle';
-let isShuffle = false;
-let currentPluginId = "";
-let isPlaying = false;
-let downloadTimer = null;
-let lastSaveTime = 0;
-let db = null;
-let indexedDbKeys = new Set();
-let activeFetches = {};
+var accountData = { theme: 'serenity', mode: 'system', volume: 1.0, updateChecking: true, offlineCache: 30, topSongsCache: 5 };
+var playerState = { queue: [], originalQueue: [], index: -1, autoplayMode: 'shuffle', pluginId: "", isPlaying: false, currentTime: 0 };
+var currentQueue = [];
+var originalQueue = [];
+var queueIndex = -1;
+var autoplayMode = 'shuffle';
+var isShuffle = false;
+var currentPluginId = "";
+var isPlaying = false;
+var downloadTimer = null;
+var lastSaveTime = 0;
+var db = null;
+var indexedDbKeys = new Set();
+var activeFetches = {};
 
-const modes = ['shuffle', 'repeat', 'loop1', 'noautoplay'];
-const modeIcons = {
+var modes = ['shuffle', 'repeat', 'loop1', 'noautoplay'];
+var modeIcons = {
   'shuffle': '/assets/images/player/Shuffle.svg',
   'repeat': '/assets/images/player/Repeat.svg',
   'loop1': '/assets/images/player/Loop1.svg',
@@ -183,7 +183,6 @@ async function fetchSongStream(id, url) {
         }
       }
     }
-    
     if (activeFetches[id]) {
       activeFetches[id].progress = 100;
       activeFetches[id].completed = true;
