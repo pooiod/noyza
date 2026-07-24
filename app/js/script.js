@@ -7,15 +7,24 @@ window.Noyza = {
 };
 
 let accountData = { theme: 'serenity', mode: 'system', volume: 1.0 };
-let playerState = { queue: [], originalQueue: [], index: -1, shuffle: false, pluginId: "", isPlaying: false, currentTime: 0 };
+let playerState = { queue: [], originalQueue: [], index: -1, autoplayMode: 'shuffle', pluginId: "", isPlaying: false, currentTime: 0 };
 let currentQueue = [];
 let originalQueue = [];
 let queueIndex = -1;
+let autoplayMode = 'shuffle';
 let isShuffle = false;
 let currentPluginId = "";
 let isPlaying = false;
 let downloadTimer = null;
 let lastSaveTime = 0;
+
+const modes = ['shuffle', 'repeat', 'loop1', 'noautoplay'];
+const modeIcons = {
+  'shuffle': '/assets/images/player/Shuffle.svg',
+  'repeat': '/assets/images/player/Repeat.svg',
+  'loop1': '/assets/images/player/Loop1.svg',
+  'noautoplay': '/assets/images/player/NoAutoplay.svg'
+};
 
 async function loadAccount() {
   const local = localStorage.getItem('noyza_account');
@@ -37,7 +46,7 @@ function savePlayerState() {
   playerState.queue = currentQueue;
   playerState.originalQueue = originalQueue;
   playerState.index = queueIndex;
-  playerState.shuffle = isShuffle;
+  playerState.autoplayMode = autoplayMode;
   playerState.pluginId = currentPluginId;
   playerState.isPlaying = isPlaying;
   localStorage.setItem('noyza_player_state', JSON.stringify(playerState));
@@ -169,6 +178,34 @@ async function renderTrackPage() {
   } catch(e) {}
 }
 
+function setAutoplayMode(mode) {
+  autoplayMode = mode;
+  const shuffleBtnImg = document.getElementById('icon-shuffle');
+  if (shuffleBtnImg) shuffleBtnImg.src = modeIcons[mode];
+  playerState.autoplayMode = mode;
+  savePlayerState();
+  
+  if (mode === 'shuffle') {
+    if (currentQueue.length > 0 && !isShuffle) {
+      const current = currentQueue[queueIndex];
+      originalQueue = [...currentQueue];
+      const rest = currentQueue.filter((_, i) => i !== queueIndex);
+      rest.sort(() => Math.random() - 0.5);
+      currentQueue = [current, ...rest];
+      queueIndex = 0;
+    }
+    isShuffle = true;
+  } else {
+    if (currentQueue.length > 0 && isShuffle) {
+      const current = currentQueue[queueIndex];
+      currentQueue = [...originalQueue];
+      queueIndex = currentQueue.findIndex(s => s.id === current.id);
+    }
+    isShuffle = false;
+  }
+  updateQueueUI();
+}
+
 async function restoreSession() {
   const saved = localStorage.getItem('noyza_player_state');
   if (saved) {
@@ -178,12 +215,14 @@ async function restoreSession() {
       currentQueue = playerState.queue || [];
       originalQueue = playerState.originalQueue || [];
       queueIndex = playerState.index;
-      isShuffle = playerState.shuffle;
       currentPluginId = playerState.pluginId;
       isPlaying = playerState.isPlaying;
       
-      const shuffleBtn = document.getElementById('btn-shuffle');
-      if (isShuffle && shuffleBtn) shuffleBtn.classList.add('active');
+      if (playerState.autoplayMode) {
+        setAutoplayMode(playerState.autoplayMode);
+      } else {
+        setAutoplayMode('shuffle');
+      }
 
       if (currentQueue.length > 0 && queueIndex >= 0) {
         updateQueueUI();
@@ -231,7 +270,7 @@ function setPlayIconState(state) {
   icon.classList.remove('spinner');
   
   if (state === 'loading') {
-    icon.src = '/assets/images/player/Spinner.svg';
+    icon.src = '/assets/images/Loader.svg';
     icon.classList.add('spinner');
   } else if (state === 'playing') {
     icon.src = '/assets/images/player/Pause.svg';
@@ -245,16 +284,9 @@ async function playQueue(list, index, pluginId) {
   originalQueue = [...list];
   queueIndex = index;
   currentPluginId = pluginId;
+  isShuffle = false; 
   
-  if (isShuffle) {
-    const selected = currentQueue[index];
-    currentQueue.splice(index, 1);
-    currentQueue.sort(() => Math.random() - 0.5);
-    currentQueue.unshift(selected);
-    queueIndex = 0;
-  }
-  
-  updateQueueUI();
+  setAutoplayMode(autoplayMode); 
   await loadAndPlayCurrent();
 }
 
@@ -337,6 +369,7 @@ function initPlayer() {
   const playlistBtn = document.getElementById('btn-playlist');
   const openBtn = document.getElementById('btn-open');
   const queuePanel = document.getElementById('queue-panel');
+  const autoplayMenu = document.getElementById('autoplay-menu');
   const progTrack = document.getElementById('progress-track');
   const progFill = document.getElementById('progress-fill');
   const progThumb = document.getElementById('progress-thumb');
@@ -376,10 +409,29 @@ function initPlayer() {
   });
   
   audio.addEventListener('ended', () => {
-    if (queueIndex < currentQueue.length - 1) {
-      queueIndex++;
+    if (autoplayMode === 'loop1') {
+      audio.currentTime = 0;
+      audio.play();
+    } else if (autoplayMode === 'noautoplay') {
+      isPlaying = false;
+      setPlayIconState('paused');
+    } else if (autoplayMode === 'repeat') {
+      if (queueIndex < currentQueue.length - 1) {
+        queueIndex++;
+      } else {
+        queueIndex = 0;
+      }
       updateQueueUI();
       loadAndPlayCurrent();
+    } else {
+      if (queueIndex < currentQueue.length - 1) {
+        queueIndex++;
+        updateQueueUI();
+        loadAndPlayCurrent();
+      } else {
+        isPlaying = false;
+        setPlayIconState('paused');
+      }
     }
   });
 
@@ -402,27 +454,32 @@ function initPlayer() {
   });
 
   shuffleBtn.addEventListener('click', () => {
-    isShuffle = !isShuffle;
-    shuffleBtn.classList.toggle('active', isShuffle);
-    
-    if (isShuffle) {
-      if (currentQueue.length > 0) {
-        const current = currentQueue[queueIndex];
-        originalQueue = [...currentQueue];
-        const rest = currentQueue.filter((_, i) => i !== queueIndex);
-        rest.sort(() => Math.random() - 0.5);
-        currentQueue = [current, ...rest];
-        queueIndex = 0;
-      }
-    } else {
-      if (currentQueue.length > 0) {
-        const current = currentQueue[queueIndex];
-        currentQueue = [...originalQueue];
-        queueIndex = currentQueue.findIndex(s => s.id === current.id);
-      }
+    let idx = modes.indexOf(autoplayMode);
+    idx = (idx + 1) % modes.length;
+    setAutoplayMode(modes[idx]);
+  });
+
+  shuffleBtn.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    if (autoplayMenu) {
+      autoplayMenu.classList.remove('hidden');
+      const rect = shuffleBtn.getBoundingClientRect();
+      autoplayMenu.style.left = `${rect.left}px`;
+      autoplayMenu.style.bottom = `${window.innerHeight - rect.top + 10}px`;
     }
-    updateQueueUI();
-    savePlayerState();
+  });
+
+  document.addEventListener('click', (e) => {
+    if (autoplayMenu && !e.target.closest('#btn-shuffle') && !e.target.closest('#autoplay-menu')) {
+      autoplayMenu.classList.add('hidden');
+    }
+  });
+
+  document.querySelectorAll('.menu-item').forEach(item => {
+    item.addEventListener('click', () => {
+      setAutoplayMode(item.getAttribute('data-mode'));
+      if (autoplayMenu) autoplayMenu.classList.add('hidden');
+    });
   });
 
   playlistBtn.addEventListener('click', () => {
@@ -451,14 +508,35 @@ function initPlayer() {
 
   let isDraggingProgress = false;
   progTrack.addEventListener('mousedown', (e) => {
+    e.preventDefault();
     isDraggingProgress = true;
+    document.body.classList.add('is-dragging');
     setProgressFromEvent(e);
   });
-  document.addEventListener('mousemove', (e) => {
-    if (isDraggingProgress) setProgressFromEvent(e);
+  
+  let isDraggingVol = false;
+  volTrack.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    isDraggingVol = true;
+    document.body.classList.add('is-dragging');
+    setVolumeFromEvent(e);
   });
+
+  document.addEventListener('mousemove', (e) => {
+    if (isDraggingProgress) {
+      e.preventDefault();
+      setProgressFromEvent(e);
+    }
+    if (isDraggingVol) {
+      e.preventDefault();
+      setVolumeFromEvent(e);
+    }
+  });
+  
   document.addEventListener('mouseup', () => {
     isDraggingProgress = false;
+    isDraggingVol = false;
+    document.body.classList.remove('is-dragging');
   });
 
   function setProgressFromEvent(e) {
@@ -477,18 +555,6 @@ function initPlayer() {
     progFill.style.width = `${pct * 100}%`;
     progThumb.style.left = `calc(${pct * 100}% - 12px)`;
   }
-
-  let isDraggingVol = false;
-  volTrack.addEventListener('mousedown', (e) => {
-    isDraggingVol = true;
-    setVolumeFromEvent(e);
-  });
-  document.addEventListener('mousemove', (e) => {
-    if (isDraggingVol) setVolumeFromEvent(e);
-  });
-  document.addEventListener('mouseup', () => {
-    isDraggingVol = false;
-  });
 
   function setVolumeFromEvent(e) {
     const rect = volTrack.getBoundingClientRect();
