@@ -152,6 +152,13 @@ body.is-dragging {
 }
 
 .music-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--gutter);
+  margin-top: var(--space-md);
+}
+
+.carousel-wrapper .music-grid {
   display: flex;
   overflow-x: auto;
   scroll-behavior: smooth;
@@ -159,12 +166,16 @@ body.is-dragging {
   padding: 4px 0;
   scrollbar-width: none;
   width: 100%;
+  margin-top: 0;
 }
 
-.music-grid::-webkit-scrollbar { display: none; }
+.carousel-wrapper .music-grid::-webkit-scrollbar { display: none; }
+
+.carousel-wrapper .album-card {
+  flex: 0 0 220px;
+}
 
 .album-card {
-  flex: 0 0 220px;
   position: relative;
   border-radius: var(--radius-lg);
   padding: var(--space-md);
@@ -227,6 +238,7 @@ body.is-dragging {
 .settings-card { border-radius: var(--radius-lg); padding: var(--space-lg); display: flex; flex-direction: column; gap: var(--space-lg); border: 1px solid var(--outline); max-width: 650px; }
 .settings-group { display: flex; flex-direction: column; gap: var(--space-xs); }
 .custom-select { padding: var(--space-sm); border-radius: var(--radius-sm); border: 1px solid var(--outline); background: var(--surface); color: var(--on-surface); font-family: var(--font-body); font-size: 16px; cursor: pointer; }
+.custom-checkbox { width: 20px; height: 20px; cursor: pointer; }
 
 .player-inner {
   width: 100%;

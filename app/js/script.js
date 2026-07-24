@@ -6,7 +6,7 @@ window.Noyza = {
   }
 };
 
-let accountData = { theme: 'serenity', mode: 'system', volume: 1.0 };
+let accountData = { theme: 'serenity', mode: 'system', volume: 1.0, updateChecking: true };
 let playerState = { queue: [], originalQueue: [], index: -1, autoplayMode: 'shuffle', pluginId: "", isPlaying: false, currentTime: 0 };
 let currentQueue = [];
 let originalQueue = [];
@@ -335,6 +335,74 @@ function initSettingsPage() {
       }
     });
   }
+
+  const updateCheckToggle = document.getElementById('update-check-toggle');
+  if (updateCheckToggle) {
+    updateCheckToggle.checked = accountData.updateChecking !== false;
+    updateCheckToggle.addEventListener('change', (e) => {
+      accountData.updateChecking = e.target.checked;
+      saveAccount();
+    });
+  }
+
+  const updateNowBtn = document.getElementById('btn-update-now');
+  if (updateNowBtn) {
+    updateNowBtn.addEventListener('click', () => {
+      window.location.href = '/update';
+    });
+  }
+
+  const customBuildBtn = document.getElementById('btn-custom-build');
+  const customBuildInput = document.getElementById('custom-build-input');
+  if (customBuildBtn && customBuildInput) {
+    customBuildBtn.addEventListener('click', () => {
+      customBuildInput.click();
+    });
+
+    customBuildInput.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        accountData.updateChecking = false;
+        if (updateCheckToggle) updateCheckToggle.checked = false;
+        saveAccount();
+
+        try {
+          await saveZipToLocalStorage(file);
+          window.location.href = `/index.html?rand=${Math.random()}`;
+        } catch (err) {
+          alert("Failed to extract and save custom build.");
+        }
+      }
+    });
+  }
+}
+
+async function saveZipToLocalStorage(zipBlob, root = "/noyza-main/app") {
+  const zip = await JSZip.loadAsync(zipBlob);
+  let prefix = root;
+  if (prefix.startsWith("/")) prefix = prefix.slice(1);
+  if (prefix && !prefix.endsWith("/")) prefix += "/";
+  let hasRoot = false;
+  zip.forEach((path, entry) => {
+    if (!entry.dir && path.startsWith(prefix)) {
+      hasRoot = true;
+    }
+  });
+  if (!hasRoot) {
+    prefix = "";
+  }
+  const promises = [];
+  zip.forEach((path, entry) => {
+    if (entry.dir) return;
+    if (prefix && !path.startsWith(prefix)) return;
+    const key = prefix ? path.slice(prefix.length) : path;
+    promises.push(
+      entry.async("base64").then(data => {
+        localStorage.setItem(key, data);
+      })
+    );
+  });
+  await Promise.all(promises);
 }
 
 function renderPluginsList() {
@@ -384,6 +452,7 @@ function uninstallPlugin(pluginId) {
 }
 
 async function checkForAppUpdates() {
+  if (accountData.updateChecking === false) return;
   try {
     const res = await fetch('/api/needs-update');
     if (res.ok) {

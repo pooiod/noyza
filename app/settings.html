@@ -9,6 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;600;700&family=Plus+Jakarta+Sans:wght@700;800&family=Space+Mono:wght@700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/css/style.css">
 <link id="theme-stylesheet" rel="stylesheet" href="/themes/serenity.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </head>
 <body data-theme-mode="light">
 <div class="app-layout">
@@ -39,6 +40,19 @@
             <option value="light">Light</option>
             <option value="dark">Dark</option>
           </select>
+        </div>
+      </div>
+
+      <div class="settings-card bg-pastel-3">
+        <h2 class="title-sm">System & Updates</h2>
+        <div class="settings-group" style="flex-direction: row; align-items: center; justify-content: space-between; display: flex;">
+          <label class="label-caps" for="update-check-toggle">Enable Automatic Updates</label>
+          <input type="checkbox" id="update-check-toggle" class="custom-checkbox">
+        </div>
+        <div style="display: flex; gap: 10px; margin-top: 10px;">
+          <button class="btn-primary" id="btn-update-now">Update Now</button>
+          <button class="btn-primary" id="btn-custom-build">Use Custom Build</button>
+          <input type="file" id="custom-build-input" accept=".zip" style="display: none;">
         </div>
       </div>
 
