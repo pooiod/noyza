@@ -679,7 +679,46 @@ body.is-dragging {
 
 .download-actions-block {
   display: flex;
+  align-items: center;
   gap: var(--space-sm);
+}
+
+.section-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-md);
+}
+
+.download-reorder-block {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-right: var(--space-md);
+}
+
+.btn-icon-small {
+  background: transparent;
+  border: 1px solid var(--outline);
+  border-radius: var(--radius-sm);
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  color: var(--on-surface);
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-icon-small:hover:not(:disabled) {
+  background-color: var(--surface-container-high);
+}
+
+.btn-icon-small:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
 }
 
 @media (max-width: 768px) {

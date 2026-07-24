@@ -120,6 +120,17 @@ function saveHistoryToDB(record) {
   });
 }
 
+function deleteHistoryFromDB(id) {
+  return new Promise((resolve) => {
+    if (!db) return resolve();
+    const tx = db.transaction("history", "readwrite");
+    const store = tx.objectStore("history");
+    const request = store.delete(id);
+    request.onsuccess = () => resolve();
+    request.onerror = () => resolve();
+  });
+}
+
 function getMetadataFromDB() {
   return new Promise((resolve) => {
     if (!db) return resolve([]);
@@ -833,134 +844,6 @@ function initSettingsPage() {
   }
 }
 
-async function getCacheStats() {
-  const topLimit = accountData.topSongsCache || 5;
-  const offlineLimit = accountData.offlineCache || 30;
-  const hoverLimit = accountData.hoverPreCacheMax || 5;
-
-  const history = await getHistoryFromDB();
-  const sortedByCount = [...history].sort((a, b) => b.count - a.count);
-  const topSongIds = new Set(sortedByCount.slice(0, topLimit).map(h => h.id));
-
-  const sortedByRecent = [...history].sort((a, b) => b.lastPlayed - a.lastPlayed);
-  const recentSongIds = new Set(sortedByRecent.slice(0, offlineLimit).map(h => h.id));
-
-  let topCount = 0;
-  let offlineCount = 0;
-  let hoverCount = 0;
-
-  for (let key of indexedDbKeys) {
-    if (topSongIds.has(key)) topCount++;
-    else if (recentSongIds.has(key)) offlineCount++;
-    else if (hoverCachedIds.includes(key)) hoverCount++;
-  }
-
-  return {
-    top: { current: topCount, max: topLimit },
-    offline: { current: offlineCount, max: offlineLimit },
-    hover: { current: hoverCount, max: hoverLimit }
-  };
-}
-
-async function initDownloadsPage() {
-  const downloadsList = document.getElementById('downloads-list');
-  if (!downloadsList) return;
-  downloadsList.innerHTML = '';
-
-  const stats = await getCacheStats();
-  
-  const offlineLabel = document.getElementById('offline-cache-stats');
-  const offlineBar = document.getElementById('offline-cache-bar');
-  if (offlineLabel && offlineBar) {
-    offlineLabel.textContent = `${stats.offline.current}/${stats.offline.max}`;
-    offlineBar.style.width = `${Math.min(100, (stats.offline.current / stats.offline.max) * 100)}%`;
-  }
-
-  const topLabel = document.getElementById('top-cache-stats');
-  const topBar = document.getElementById('top-cache-bar');
-  if (topLabel && topBar) {
-    topLabel.textContent = `${stats.top.current}/${stats.top.max}`;
-    topBar.style.width = `${Math.min(100, (stats.top.current / stats.top.max) * 100)}%`;
-  }
-
-  const hoverLabel = document.getElementById('hover-cache-stats');
-  const hoverBar = document.getElementById('hover-cache-bar');
-  if (hoverLabel && hoverBar) {
-    hoverLabel.textContent = `${stats.hover.current}/${stats.hover.max}`;
-    hoverBar.style.width = `${Math.min(100, (stats.hover.current / stats.hover.max) * 100)}%`;
-  }
-
-  const cachedMeta = await getMetadataFromDB();
-  
-  const songs = cachedMeta.filter(m => indexedDbKeys.has(m.id)).map(m => ({
-    id: m.id.split('/')[1],
-    title: m.title,
-    artist: m.artist,
-    cover: m.cover,
-    pluginId: m.pluginId,
-    globalId: m.id
-  }));
-
-  if (songs.length === 0) {
-    downloadsList.innerHTML = '<div class="body-md" style="color: var(--on-surface-variant); padding: 10px 0;">No downloaded songs.</div>';
-    return;
-  }
-
-  songs.forEach((song, index) => {
-    const row = document.createElement('div');
-    row.className = 'download-row';
-
-    const infoBlock = document.createElement('div');
-    infoBlock.className = 'download-info-block';
-
-    const art = document.createElement('div');
-    art.className = 'download-art';
-    art.style.backgroundImage = `url('${song.cover}')`;
-
-    const textBlock = document.createElement('div');
-    textBlock.className = 'download-text-block';
-
-    const title = document.createElement('h3');
-    title.className = 'title-sm';
-    title.textContent = song.title;
-
-    const artist = document.createElement('p');
-    artist.className = 'label-caps';
-    artist.textContent = song.artist;
-
-    textBlock.appendChild(title);
-    textBlock.appendChild(artist);
-    infoBlock.appendChild(art);
-    infoBlock.appendChild(textBlock);
-
-    const actionsBlock = document.createElement('div');
-    actionsBlock.className = 'download-actions-block';
-
-    const playBtn = document.createElement('button');
-    playBtn.className = 'btn-primary chip';
-    playBtn.textContent = 'Play';
-    playBtn.addEventListener('click', () => {
-      playQueue(songs, index, song.pluginId);
-    });
-
-    const removeBtn = document.createElement('button');
-    removeBtn.className = 'btn-uninstall';
-    removeBtn.textContent = 'Remove';
-    removeBtn.addEventListener('click', async () => {
-      await deleteSongFromDB(song.globalId);
-      await deleteMetadataFromDB(song.globalId);
-      initDownloadsPage();
-    });
-
-    actionsBlock.appendChild(playBtn);
-    actionsBlock.appendChild(removeBtn);
-
-    row.appendChild(infoBlock);
-    row.appendChild(actionsBlock);
-    downloadsList.appendChild(row);
-  });
-}
-
 async function saveZipToLocalStorage(zipBlob, root = "/noyza-main/app") {
   const zip = await JSZip.loadAsync(zipBlob);
   let prefix = root;
@@ -1556,4 +1439,265 @@ function initPlayer() {
     volFill.style.height = `${pct * 100}%`;
     volThumb.style.bottom = `calc(${pct * 100}% - 12px)`;
   }
+}
+
+async function getCacheStats() {
+  const topLimit = accountData.topSongsCache || 5;
+  const offlineLimit = accountData.offlineCache || 30;
+  const hoverLimit = accountData.hoverPreCacheMax || 5;
+
+  const history = await getHistoryFromDB();
+  const sortedByCount = [...history].sort((a, b) => b.count - a.count);
+  const topSongIds = new Set(sortedByCount.slice(0, topLimit).map(h => h.id));
+
+  const sortedByRecent = [...history].sort((a, b) => b.lastPlayed - a.lastPlayed);
+  const recentSongIds = new Set(sortedByRecent.slice(0, offlineLimit).map(h => h.id));
+
+  let topCount = 0;
+  let offlineCount = 0;
+  let hoverCount = 0;
+
+  for (let key of indexedDbKeys) {
+    if (topSongIds.has(key)) topCount++;
+    else if (recentSongIds.has(key)) offlineCount++;
+    else if (hoverCachedIds.includes(key)) hoverCount++;
+  }
+
+  return {
+    top: { current: topCount, max: topLimit },
+    offline: { current: offlineCount, max: offlineLimit },
+    hover: { current: hoverCount, max: hoverLimit }
+  };
+}
+
+async function initDownloadsPage() {
+  const stats = await getCacheStats();
+  
+  const offlineLabel = document.getElementById('offline-cache-stats');
+  const offlineBar = document.getElementById('offline-cache-bar');
+  if (offlineLabel && offlineBar) {
+    offlineLabel.textContent = `${stats.offline.current}/${stats.offline.max}`;
+    offlineBar.style.width = `${Math.min(100, (stats.offline.current / stats.offline.max) * 100)}%`;
+  }
+
+  const topLabel = document.getElementById('top-cache-stats');
+  const topBar = document.getElementById('top-cache-bar');
+  if (topLabel && topBar) {
+    topLabel.textContent = `${stats.top.current}/${stats.top.max}`;
+    topBar.style.width = `${Math.min(100, (stats.top.current / stats.top.max) * 100)}%`;
+  }
+
+  const hoverLabel = document.getElementById('hover-cache-stats');
+  const hoverBar = document.getElementById('hover-cache-bar');
+  if (hoverLabel && hoverBar) {
+    hoverLabel.textContent = `${stats.hover.current}/${stats.hover.max}`;
+    hoverBar.style.width = `${Math.min(100, (stats.hover.current / stats.hover.max) * 100)}%`;
+  }
+
+  const topLimit = accountData.topSongsCache || 5;
+  const offlineLimit = accountData.offlineCache || 30;
+
+  const history = await getHistoryFromDB();
+  const sortedByCount = [...history].sort((a, b) => b.count - a.count);
+  const topSongIds = new Set(sortedByCount.slice(0, topLimit).map(h => h.id));
+
+  const sortedByRecent = [...history].sort((a, b) => b.lastPlayed - a.lastPlayed);
+  const recentSongIds = new Set(sortedByRecent.slice(0, offlineLimit).map(h => h.id).filter(id => !topSongIds.has(id)));
+
+  const cachedMeta = await getMetadataFromDB();
+  const songs = cachedMeta.filter(m => indexedDbKeys.has(m.id));
+
+  const topSongs = [];
+  const offlineSongs = [];
+  const hoverSongs = [];
+
+  songs.forEach(s => {
+    const hist = history.find(h => h.id === s.id);
+    const songObj = {
+      id: s.id.split('/')[1],
+      title: s.title,
+      artist: s.artist,
+      cover: s.cover,
+      pluginId: s.pluginId,
+      globalId: s.id,
+      lastPlayed: hist ? hist.lastPlayed : 0,
+      count: hist ? hist.count : 0
+    };
+
+    if (topSongIds.has(s.id)) {
+      topSongs.push(songObj);
+    } else if (recentSongIds.has(s.id)) {
+      offlineSongs.push(songObj);
+    } else if (hoverCachedIds.includes(s.id) || !hist) {
+      hoverSongs.push(songObj);
+    }
+  });
+
+  topSongs.sort((a, b) => b.count - a.count);
+  offlineSongs.sort((a, b) => b.lastPlayed - a.lastPlayed);
+
+  renderDownloadSection('list-hover', hoverSongs);
+  renderDownloadSection('list-offline', offlineSongs, true);
+  renderDownloadSection('list-top', topSongs);
+
+  const clearHoverBtn = document.getElementById('btn-clear-hover');
+  if (clearHoverBtn) {
+    clearHoverBtn.onclick = () => clearSectionCache(hoverSongs, 'hover');
+  }
+  const clearOfflineBtn = document.getElementById('btn-clear-offline');
+  if (clearOfflineBtn) {
+    clearOfflineBtn.onclick = () => clearSectionCache(offlineSongs, 'offline');
+  }
+  const clearTopBtn = document.getElementById('btn-clear-top');
+  if (clearTopBtn) {
+    clearTopBtn.onclick = () => clearSectionCache(topSongs, 'top');
+  }
+}
+
+function renderDownloadSection(targetId, list, isOffline = false) {
+  const container = document.getElementById(targetId);
+  if (!container) return;
+  container.innerHTML = '';
+
+  if (list.length === 0) {
+    container.innerHTML = '<div class="body-md" style="color: var(--on-surface-variant); padding: 10px 0;">No songs in this cache.</div>';
+    return;
+  }
+
+  list.forEach((song, index) => {
+    const row = document.createElement('div');
+    row.className = 'download-row';
+
+    const infoBlock = document.createElement('div');
+    infoBlock.className = 'download-info-block';
+
+    const art = document.createElement('div');
+    art.className = 'download-art';
+    art.style.backgroundImage = `url('${song.cover}')`;
+
+    const textBlock = document.createElement('div');
+    textBlock.className = 'download-text-block';
+
+    const title = document.createElement('h3');
+    title.className = 'title-sm';
+    title.textContent = song.title;
+
+    const artist = document.createElement('p');
+    artist.className = 'label-caps';
+    artist.textContent = song.artist;
+
+    textBlock.appendChild(title);
+    textBlock.appendChild(artist);
+    infoBlock.appendChild(art);
+    infoBlock.appendChild(textBlock);
+
+    const actionsBlock = document.createElement('div');
+    actionsBlock.className = 'download-actions-block';
+
+    if (isOffline) {
+      const reorderBlock = document.createElement('div');
+      reorderBlock.className = 'download-reorder-block';
+
+      const upBtn = document.createElement('button');
+      upBtn.className = 'btn-icon-small';
+      upBtn.innerHTML = '▲';
+      if (index === 0) upBtn.disabled = true;
+      upBtn.addEventListener('click', () => moveOfflineItem(index, 'up', list));
+
+      const downBtn = document.createElement('button');
+      downBtn.className = 'btn-icon-small';
+      downBtn.innerHTML = '▼';
+      if (index === list.length - 1) downBtn.disabled = true;
+      downBtn.addEventListener('click', () => moveOfflineItem(index, 'down', list));
+
+      reorderBlock.appendChild(upBtn);
+      reorderBlock.appendChild(downBtn);
+      actionsBlock.appendChild(reorderBlock);
+    }
+
+    const playBtn = document.createElement('button');
+    playBtn.className = 'btn-primary chip';
+    playBtn.textContent = 'Play';
+    playBtn.addEventListener('click', () => {
+      playQueue(list, index, song.pluginId);
+    });
+
+    const removeBtn = document.createElement('button');
+    removeBtn.className = 'btn-uninstall';
+    removeBtn.textContent = 'Remove';
+    removeBtn.addEventListener('click', async () => {
+      await deleteSongFromDB(song.globalId);
+      await deleteMetadataFromDB(song.globalId);
+      await deleteHistoryFromDB(song.globalId);
+      initDownloadsPage();
+    });
+
+    actionsBlock.appendChild(playBtn);
+    actionsBlock.appendChild(removeBtn);
+
+    row.appendChild(infoBlock);
+    row.appendChild(actionsBlock);
+    container.appendChild(row);
+  });
+}
+
+async function moveOfflineItem(index, direction, list) {
+  if (direction === 'up' && index > 0) {
+    const itemA = list[index];
+    const itemB = list[index - 1];
+    
+    const historyA = await getHistoryRecord(itemA.globalId);
+    const historyB = await getHistoryRecord(itemB.globalId);
+    
+    if (historyA && historyB) {
+      const temp = historyA.lastPlayed;
+      historyA.lastPlayed = historyB.lastPlayed;
+      historyB.lastPlayed = temp;
+      
+      await saveHistoryToDB(historyA);
+      await saveHistoryToDB(historyB);
+      initDownloadsPage();
+    }
+  } else if (direction === 'down' && index < list.length - 1) {
+    const itemA = list[index];
+    const itemB = list[index + 1];
+    
+    const historyA = await getHistoryRecord(itemA.globalId);
+    const historyB = await getHistoryRecord(itemB.globalId);
+    
+    if (historyA && historyB) {
+      const temp = historyA.lastPlayed;
+      historyA.lastPlayed = historyB.lastPlayed;
+      historyB.lastPlayed = temp;
+      
+      await saveHistoryToDB(historyA);
+      await saveHistoryToDB(historyB);
+      initDownloadsPage();
+    }
+  }
+}
+
+function getHistoryRecord(id) {
+  return new Promise((resolve) => {
+    if (!db) return resolve(null);
+    const tx = db.transaction("history", "readonly");
+    const store = tx.objectStore("history");
+    const request = store.get(id);
+    request.onsuccess = () => resolve(request.result || null);
+    request.onerror = () => resolve(null);
+  });
+}
+
+async function clearSectionCache(songsList, cacheType) {
+  for (const song of songsList) {
+    await deleteSongFromDB(song.globalId);
+    await deleteMetadataFromDB(song.globalId);
+    if (cacheType === 'offline' || cacheType === 'top') {
+      await deleteHistoryFromDB(song.globalId);
+    }
+  }
+  if (cacheType === 'hover') {
+    hoverCachedIds = [];
+  }
+  initDownloadsPage();
 }
