@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Noyza - Downloads</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;600;700&family=Plus+Jakarta+Sans:wght@700;800&family=Space+Mono:wght@700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css">
+<link id="theme-stylesheet" rel="stylesheet" href="/themes/serenity.css">
+</head>
+<body data-theme-mode="light">
+<div class="app-layout">
+  <aside class="sidebar-container">
+    {{/components/sidebar.html}}
+  </aside>
+  <main class="main-content">
+    <header class="top-header">
+      <h1 class="headline-md">Manage Downloads</h1>
+    </header>
+    
+    <section class="downloads-stats">
+      <div class="stat-card bg-pastel-1">
+        <span class="label-caps">Offline Cache</span>
+        <h2 class="title-sm" id="offline-cache-stats">0/0</h2>
+        <div class="stat-progress-bar">
+          <div class="stat-progress-fill" id="offline-cache-bar"></div>
+        </div>
+      </div>
+      <div class="stat-card bg-pastel-3">
+        <span class="label-caps">Top Songs Cache</span>
+        <h2 class="title-sm" id="top-cache-stats">0/0</h2>
+        <div class="stat-progress-bar">
+          <div class="stat-progress-fill" id="top-cache-bar"></div>
+        </div>
+      </div>
+      <div class="stat-card bg-pastel-4">
+        <span class="label-caps">Hover Pre-cache</span>
+        <h2 class="title-sm" id="hover-cache-stats">0/0</h2>
+        <div class="stat-progress-bar">
+          <div class="stat-progress-fill" id="hover-cache-bar"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="library-section">
+      <h2 class="title-sm section-title">Offline Music</h2>
+      <div class="downloads-list-wrapper" id="downloads-list"></div>
+    </section>
+  </main>
+  <footer class="player-container">
+    {{/components/player.html}}
+  </footer>
+</div>
+<script src="/js/script.js"></script>
+</body>
+</html>

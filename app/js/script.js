@@ -231,6 +231,10 @@ window.Noyza.SongFetchProgress = function(id) {
 };
 
 async function recordPlay(id, songMeta) {
+  if (hoverCachedIds.includes(id)) {
+    hoverCachedIds = hoverCachedIds.filter(hId => hId !== id);
+  }
+
   await saveMetadataToDB({
     id: id,
     title: songMeta.title,
@@ -416,6 +420,8 @@ async function initApp() {
     initSearchPage();
   } else if (currentPath.includes('settings.html')) {
     initSettingsPage();
+  } else if (currentPath.includes('downloads.html')) {
+    initDownloadsPage();
   } else {
     await initRecentSection();
     initSections();
@@ -431,9 +437,11 @@ function initUIBindings() {
   const navHome = document.getElementById('nav-home');
   const navDiscover = document.getElementById('nav-discover');
   const navSettings = document.getElementById('nav-settings');
+  const navDownloads = document.getElementById('nav-downloads');
   
   if (currentPath.includes('settings.html') && navSettings) navSettings.classList.add('active');
   else if (currentPath.includes('search.html') && navDiscover) navDiscover.classList.add('active');
+  else if (currentPath.includes('downloads.html') && navDownloads) navDownloads.classList.add('active');
   else if (!currentPath.includes('track.html') && navHome) navHome.classList.add('active');
 
   const themeSelect = document.getElementById('theme-select');
@@ -823,6 +831,134 @@ function initSettingsPage() {
       saveAccount();
     });
   }
+}
+
+async function getCacheStats() {
+  const topLimit = accountData.topSongsCache || 5;
+  const offlineLimit = accountData.offlineCache || 30;
+  const hoverLimit = accountData.hoverPreCacheMax || 5;
+
+  const history = await getHistoryFromDB();
+  const sortedByCount = [...history].sort((a, b) => b.count - a.count);
+  const topSongIds = new Set(sortedByCount.slice(0, topLimit).map(h => h.id));
+
+  const sortedByRecent = [...history].sort((a, b) => b.lastPlayed - a.lastPlayed);
+  const recentSongIds = new Set(sortedByRecent.slice(0, offlineLimit).map(h => h.id));
+
+  let topCount = 0;
+  let offlineCount = 0;
+  let hoverCount = 0;
+
+  for (let key of indexedDbKeys) {
+    if (topSongIds.has(key)) topCount++;
+    else if (recentSongIds.has(key)) offlineCount++;
+    else if (hoverCachedIds.includes(key)) hoverCount++;
+  }
+
+  return {
+    top: { current: topCount, max: topLimit },
+    offline: { current: offlineCount, max: offlineLimit },
+    hover: { current: hoverCount, max: hoverLimit }
+  };
+}
+
+async function initDownloadsPage() {
+  const downloadsList = document.getElementById('downloads-list');
+  if (!downloadsList) return;
+  downloadsList.innerHTML = '';
+
+  const stats = await getCacheStats();
+  
+  const offlineLabel = document.getElementById('offline-cache-stats');
+  const offlineBar = document.getElementById('offline-cache-bar');
+  if (offlineLabel && offlineBar) {
+    offlineLabel.textContent = `${stats.offline.current}/${stats.offline.max}`;
+    offlineBar.style.width = `${Math.min(100, (stats.offline.current / stats.offline.max) * 100)}%`;
+  }
+
+  const topLabel = document.getElementById('top-cache-stats');
+  const topBar = document.getElementById('top-cache-bar');
+  if (topLabel && topBar) {
+    topLabel.textContent = `${stats.top.current}/${stats.top.max}`;
+    topBar.style.width = `${Math.min(100, (stats.top.current / stats.top.max) * 100)}%`;
+  }
+
+  const hoverLabel = document.getElementById('hover-cache-stats');
+  const hoverBar = document.getElementById('hover-cache-bar');
+  if (hoverLabel && hoverBar) {
+    hoverLabel.textContent = `${stats.hover.current}/${stats.hover.max}`;
+    hoverBar.style.width = `${Math.min(100, (stats.hover.current / stats.hover.max) * 100)}%`;
+  }
+
+  const cachedMeta = await getMetadataFromDB();
+  
+  const songs = cachedMeta.filter(m => indexedDbKeys.has(m.id)).map(m => ({
+    id: m.id.split('/')[1],
+    title: m.title,
+    artist: m.artist,
+    cover: m.cover,
+    pluginId: m.pluginId,
+    globalId: m.id
+  }));
+
+  if (songs.length === 0) {
+    downloadsList.innerHTML = '<div class="body-md" style="color: var(--on-surface-variant); padding: 10px 0;">No downloaded songs.</div>';
+    return;
+  }
+
+  songs.forEach((song, index) => {
+    const row = document.createElement('div');
+    row.className = 'download-row';
+
+    const infoBlock = document.createElement('div');
+    infoBlock.className = 'download-info-block';
+
+    const art = document.createElement('div');
+    art.className = 'download-art';
+    art.style.backgroundImage = `url('${song.cover}')`;
+
+    const textBlock = document.createElement('div');
+    textBlock.className = 'download-text-block';
+
+    const title = document.createElement('h3');
+    title.className = 'title-sm';
+    title.textContent = song.title;
+
+    const artist = document.createElement('p');
+    artist.className = 'label-caps';
+    artist.textContent = song.artist;
+
+    textBlock.appendChild(title);
+    textBlock.appendChild(artist);
+    infoBlock.appendChild(art);
+    infoBlock.appendChild(textBlock);
+
+    const actionsBlock = document.createElement('div');
+    actionsBlock.className = 'download-actions-block';
+
+    const playBtn = document.createElement('button');
+    playBtn.className = 'btn-primary chip';
+    playBtn.textContent = 'Play';
+    playBtn.addEventListener('click', () => {
+      playQueue(songs, index, song.pluginId);
+    });
+
+    const removeBtn = document.createElement('button');
+    removeBtn.className = 'btn-uninstall';
+    removeBtn.textContent = 'Remove';
+    removeBtn.addEventListener('click', async () => {
+      await deleteSongFromDB(song.globalId);
+      await deleteMetadataFromDB(song.globalId);
+      initDownloadsPage();
+    });
+
+    actionsBlock.appendChild(playBtn);
+    actionsBlock.appendChild(removeBtn);
+
+    row.appendChild(infoBlock);
+    row.appendChild(actionsBlock);
+    downloadsList.appendChild(row);
+  });
 }
 
 async function saveZipToLocalStorage(zipBlob, root = "/noyza-main/app") {

@@ -614,6 +614,74 @@ body.is-dragging {
   text-align: center;
 }
 
+.downloads-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: var(--gutter);
+  margin-bottom: var(--space-lg);
+}
+
+.stat-card {
+  border-radius: var(--radius-lg);
+  padding: var(--space-md);
+  border: 1px solid var(--outline);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.stat-progress-bar {
+  height: 6px;
+  border-radius: 3px;
+  background-color: var(--outline-variant);
+  overflow: hidden;
+  position: relative;
+}
+
+.stat-progress-fill {
+  height: 100%;
+  background-color: var(--primary);
+  width: 0%;
+}
+
+.download-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-sm) var(--space-md);
+  background-color: var(--surface-container-low);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--outline);
+  margin-bottom: 10px;
+  gap: var(--space-md);
+}
+
+.download-info-block {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.download-art {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-sm);
+  background-size: cover;
+  background-position: center;
+  border: 1px solid var(--outline);
+}
+
+.download-text-block {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.download-actions-block {
+  display: flex;
+  gap: var(--space-sm);
+}
+
 @media (max-width: 768px) {
   .app-layout { grid-template-columns: 1fr; grid-template-rows: 1fr 110px; grid-template-areas: "main" "player"; }
   .sidebar-container { display: none; }
