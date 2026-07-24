@@ -986,21 +986,13 @@ async function restoreSession() {
           try {
             const trackIdGlobal = currentPluginId + '/' + baseSong.id;
             const fullSong = await plugin.getSong(baseSong.id);
-            const dlProgress = window.Noyza.SongFetchProgress(trackIdGlobal);
-            
-            let targetUrl = fullSong.url;
-            if (dlProgress === 100) {
-              const offlineDataUri = await window.Noyza.SongFetch(trackIdGlobal, "");
-              if (offlineDataUri) targetUrl = offlineDataUri;
-            } else {
-              window.Noyza.SongFetch(trackIdGlobal, fullSong.url);
-            }
+            const targetUrl = await window.Noyza.SongFetch(trackIdGlobal, fullSong.url);
             
             const audio = document.getElementById('audio-element');
             const titleDisplay = document.getElementById('player-title');
             const playerArt = document.getElementById('player-art');
             
-            if (audio && titleDisplay) {
+            if (audio && titleDisplay && targetUrl) {
               audio.src = targetUrl;
               titleDisplay.textContent = fullSong.title;
               if (playerArt) {
@@ -1067,28 +1059,22 @@ async function loadAndPlayCurrent() {
     setPlayIconState('loading');
     
     const fullSong = await plugin.getSong(baseSong.id);
-    const dlProgress = window.Noyza.SongFetchProgress(trackIdGlobal);
-    
-    let targetUrl = fullSong.url;
-    if (dlProgress === 100) {
-      const offlineDataUri = await window.Noyza.SongFetch(trackIdGlobal, "");
-      if (offlineDataUri) targetUrl = offlineDataUri;
-    } else {
-      window.Noyza.SongFetch(trackIdGlobal, fullSong.url);
-    }
+    const targetUrl = await window.Noyza.SongFetch(trackIdGlobal, fullSong.url);
     
     const audio = document.getElementById('audio-element');
     const titleDisplay = document.getElementById('player-title');
     const playerArt = document.getElementById('player-art');
     const dlFill = document.getElementById('download-fill');
     
-    if (audio && titleDisplay) {
+    if (audio && titleDisplay && targetUrl) {
       audio.src = targetUrl;
       titleDisplay.textContent = fullSong.title;
       if (playerArt) {
         playerArt.src = fullSong.cover;
         playerArt.style.display = 'block';
       }
+      
+      const dlProgress = window.Noyza.SongFetchProgress(trackIdGlobal);
       if (dlFill) dlFill.style.width = `${dlProgress}%`;
       
       audio.play().then(() => { 
