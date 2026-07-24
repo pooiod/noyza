@@ -171,25 +171,23 @@ async function fetchSongStream(id, url) {
     let receivedLength = 0;
     let chunks = [];
 
-    activeFetches[id] = {
-      progress: 0,
-      receivedBytes: 0,
-      totalBytes: contentLength,
-      chunks: chunks,
-      completed: false
-    };
-
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
       chunks.push(value);
       receivedLength += value.length;
-      activeFetches[id].receivedBytes = receivedLength;
-      if (contentLength) {
-        activeFetches[id].progress = Math.round((receivedLength / contentLength) * 100);
+      if (activeFetches[id]) {
+        activeFetches[id].receivedBytes = receivedLength;
+        if (contentLength) {
+          activeFetches[id].progress = Math.round((receivedLength / contentLength) * 100);
+        }
       }
     }
-    activeFetches[id].completed = true;
+    
+    if (activeFetches[id]) {
+      activeFetches[id].progress = 100;
+      activeFetches[id].completed = true;
+    }
 
     const allBytes = new Uint8Array(receivedLength);
     let position = 0;
@@ -209,15 +207,23 @@ window.Noyza.SongFetch = async function(id, url) {
     return arrayBufferToDataUri(cached, "audio/mpeg");
   }
 
-  let fetchState = activeFetches[id];
-  if (!fetchState && url) {
-    fetchSongStream(id, url);
+  if (url && !activeFetches[id]) {
+    activeFetches[id] = {
+      progress: 0,
+      receivedBytes: 0,
+      totalBytes: 0,
+      chunks: [],
+      completed: false
+    };
+    setTimeout(() => {
+      fetchSongStream(id, url);
+    }, 2000);
   }
 
   return url || "";
 };
 
-window.Noyza.SongFetchProgress = function(id, url) {
+window.Noyza.SongFetchProgress = function(id) {
   if (indexedDbKeys.has(id)) return 100;
   const fetchState = activeFetches[id];
   if (fetchState) return fetchState.progress;
@@ -1079,9 +1085,7 @@ async function loadAndPlayCurrent() {
       const nextSong = currentQueue[queueIndex + 1];
       const nextIdGlobal = currentPluginId + '/' + nextSong.id;
       plugin.getSong(nextSong.id).then(nextFull => {
-        if (window.Noyza.SongFetchProgress(nextIdGlobal) < 100) {
-          window.Noyza.SongFetch(nextIdGlobal, nextFull.url);
-        }
+        window.Noyza.SongFetch(nextIdGlobal, nextFull.url);
       }).catch(()=>{});
     }
 
