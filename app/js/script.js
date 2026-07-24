@@ -6,7 +6,7 @@ window.Noyza = {
   }
 };
 
-let accountData = { theme: 'serenity', mode: 'system', volume: 1.0, updateChecking: true };
+let accountData = { theme: 'serenity', mode: 'system', volume: 1.0, updateChecking: true, offlineCache: 30, topSongsCache: 5 };
 let playerState = { queue: [], originalQueue: [], index: -1, autoplayMode: 'shuffle', pluginId: "", isPlaying: false, currentTime: 0 };
 let currentQueue = [];
 let originalQueue = [];
@@ -17,6 +17,9 @@ let currentPluginId = "";
 let isPlaying = false;
 let downloadTimer = null;
 let lastSaveTime = 0;
+let db = null;
+let indexedDbKeys = new Set();
+let activeFetches = {};
 
 const modes = ['shuffle', 'repeat', 'loop1', 'noautoplay'];
 const modeIcons = {
@@ -25,6 +28,254 @@ const modeIcons = {
   'loop1': '/assets/images/player/Loop1.svg',
   'noautoplay': '/assets/images/player/NoAutoplay.svg'
 };
+
+function initDB() {
+  return new Promise((resolve) => {
+    const request = indexedDB.open("NoyzaDB", 1);
+    request.onupgradeneeded = (e) => {
+      const database = e.target.result;
+      if (!database.objectStoreNames.contains("songs")) database.createObjectStore("songs");
+      if (!database.objectStoreNames.contains("history")) database.createObjectStore("history", { keyPath: "id" });
+      if (!database.objectStoreNames.contains("metadata")) database.createObjectStore("metadata", { keyPath: "id" });
+    };
+    request.onsuccess = (e) => {
+      db = e.target.result;
+      refreshDbKeys().then(resolve);
+    };
+    request.onerror = () => resolve();
+  });
+}
+
+function refreshDbKeys() {
+  return new Promise((resolve) => {
+    if (!db) return resolve();
+    const tx = db.transaction("songs", "readonly");
+    const store = tx.objectStore("songs");
+    const request = store.getAllKeys();
+    request.onsuccess = () => {
+      indexedDbKeys = new Set(request.result);
+      resolve();
+    };
+    request.onerror = () => resolve();
+  });
+}
+
+function getSongFromDB(id) {
+  return new Promise((resolve) => {
+    if (!db) return resolve(null);
+    const tx = db.transaction("songs", "readonly");
+    const store = tx.objectStore("songs");
+    const request = store.get(id);
+    request.onsuccess = () => resolve(request.result || null);
+    request.onerror = () => resolve(null);
+  });
+}
+
+function saveSongToDB(id, buffer) {
+  return new Promise((resolve) => {
+    if (!db) return resolve();
+    const tx = db.transaction("songs", "readwrite");
+    const store = tx.objectStore("songs");
+    const request = store.put(buffer, id);
+    request.onsuccess = () => {
+      refreshDbKeys().then(resolve);
+    };
+    request.onerror = () => resolve();
+  });
+}
+
+function deleteSongFromDB(id) {
+  return new Promise((resolve) => {
+    if (!db) return resolve();
+    const tx = db.transaction("songs", "readwrite");
+    const store = tx.objectStore("songs");
+    const request = store.delete(id);
+    request.onsuccess = () => {
+      refreshDbKeys().then(resolve);
+    };
+    request.onerror = () => resolve();
+  });
+}
+
+function getHistoryFromDB() {
+  return new Promise((resolve) => {
+    if (!db) return resolve([]);
+    const tx = db.transaction("history", "readonly");
+    const store = tx.objectStore("history");
+    const request = store.getAll();
+    request.onsuccess = () => resolve(request.result || []);
+    request.onerror = () => resolve([]);
+  });
+}
+
+function saveHistoryToDB(record) {
+  return new Promise((resolve) => {
+    if (!db) return resolve();
+    const tx = db.transaction("history", "readwrite");
+    const store = tx.objectStore("history");
+    const request = store.put(record);
+    request.onsuccess = () => resolve();
+    request.onerror = () => resolve();
+  });
+}
+
+function getMetadataFromDB() {
+  return new Promise((resolve) => {
+    if (!db) return resolve([]);
+    const tx = db.transaction("metadata", "readonly");
+    const store = tx.objectStore("metadata");
+    const request = store.getAll();
+    request.onsuccess = () => resolve(request.result || []);
+    request.onerror = () => resolve([]);
+  });
+}
+
+function saveMetadataToDB(meta) {
+  return new Promise((resolve) => {
+    if (!db) return resolve();
+    const tx = db.transaction("metadata", "readwrite");
+    const store = tx.objectStore("metadata");
+    const request = store.put(meta);
+    request.onsuccess = () => resolve();
+    request.onerror = () => resolve();
+  });
+}
+
+function deleteMetadataFromDB(id) {
+  return new Promise((resolve) => {
+    if (!db) return resolve();
+    const tx = db.transaction("metadata", "readwrite");
+    const store = tx.objectStore("metadata");
+    const request = store.delete(id);
+    request.onsuccess = () => resolve();
+    request.onerror = () => resolve();
+  });
+}
+
+function arrayBufferToDataUri(buffer, mime) {
+  const bytes = new Uint8Array(buffer);
+  let binary = '';
+  const chunkSize = 8192;
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunkSize));
+  }
+  return `data:${mime};base64,${btoa(binary)}`;
+}
+
+async function fetchSongStream(id, url) {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) return;
+    const reader = response.body.getReader();
+    const contentLength = +response.headers.get('Content-Length') || 0;
+    let receivedLength = 0;
+    let chunks = [];
+
+    activeFetches[id] = {
+      progress: 0,
+      receivedBytes: 0,
+      totalBytes: contentLength,
+      chunks: chunks,
+      completed: false
+    };
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+      receivedLength += value.length;
+      activeFetches[id].receivedBytes = receivedLength;
+      if (contentLength) {
+        activeFetches[id].progress = Math.round((receivedLength / contentLength) * 100);
+      }
+    }
+    activeFetches[id].completed = true;
+
+    const allBytes = new Uint8Array(receivedLength);
+    let position = 0;
+    for (let chunk of chunks) {
+      allBytes.set(chunk, position);
+      position += chunk.length;
+    }
+
+    await saveSongToDB(id, allBytes.buffer);
+    await enforceCacheLimits();
+  } catch (e) {}
+}
+
+window.Noyza.SongFetch = async function(id, url) {
+  const cached = await getSongFromDB(id);
+  if (cached) {
+    return arrayBufferToDataUri(cached, "audio/mpeg");
+  }
+
+  let fetchState = activeFetches[id];
+  if (!fetchState) {
+    fetchSongStream(id, url);
+    await new Promise(r => setTimeout(r, 100));
+    fetchState = activeFetches[id];
+  }
+
+  if (fetchState) {
+    const total = fetchState.totalBytes || fetchState.receivedBytes;
+    const padded = new Uint8Array(total);
+    let offset = 0;
+    for (let chunk of fetchState.chunks) {
+      padded.set(chunk, offset);
+      offset += chunk.length;
+    }
+    return arrayBufferToDataUri(padded.buffer, "audio/mpeg");
+  }
+  return "";
+};
+
+window.Noyza.SongFetchProgress = function(id, url) {
+  if (indexedDbKeys.has(id)) return 100;
+  const fetchState = activeFetches[id];
+  if (fetchState) return fetchState.progress;
+  return 0;
+};
+
+async function recordPlay(id, songMeta) {
+  await saveMetadataToDB({
+    id: id,
+    title: songMeta.title,
+    artist: songMeta.artist,
+    cover: songMeta.cover,
+    pluginId: songMeta.pluginId || currentPluginId
+  });
+
+  const history = await getHistoryFromDB();
+  let record = history.find(h => h.id === id);
+  if (!record) {
+    record = { id: id, count: 0, lastPlayed: 0 };
+  }
+  record.count += 1;
+  record.lastPlayed = Date.now();
+  await saveHistoryToDB(record);
+  await enforceCacheLimits();
+}
+
+async function enforceCacheLimits() {
+  const topLimit = accountData.topSongsCache || 5;
+  const offlineLimit = accountData.offlineCache || 30;
+
+  const history = await getHistoryFromDB();
+  const sortedByCount = [...history].sort((a, b) => b.count - a.count);
+  const topSongIds = new Set(sortedByCount.slice(0, topLimit).map(h => h.id));
+
+  const sortedByRecent = [...history].sort((a, b) => b.lastPlayed - a.lastPlayed);
+  const recentSongIds = new Set(sortedByRecent.slice(0, offlineLimit).map(h => h.id));
+
+  const keepIds = new Set([...topSongIds, ...recentSongIds]);
+
+  for (let key of indexedDbKeys) {
+    if (!keepIds.has(key)) {
+      await deleteSongFromDB(key);
+      await deleteMetadataFromDB(key);
+    }
+  }
+}
 
 async function loadAccount() {
   const local = localStorage.getItem('noyza_account');
@@ -99,6 +350,7 @@ async function bootPlugins() {
 }
 
 (async () => {
+  await initDB();
   await loadAccount();
   await bootPlugins();
   
@@ -150,6 +402,8 @@ function initUIBindings() {
 
 async function initSections() {
   const sections = [ { id: 'grid-foryou', type: 'foryou' }, { id: 'grid-trending', type: 'trending' }, { id: 'grid-latest', type: 'latest' } ];
+  let totalLoaded = 0;
+
   for (const sec of sections) {
     const grid = document.getElementById(sec.id);
     if (!grid) continue;
@@ -162,37 +416,92 @@ async function initSections() {
     for (const plugin of window.Noyza.extensions.plugins) {
       try {
         const songs = await plugin.browse(sec.type);
-        songs.forEach((song, index) => {
-          const pastelClass = `bg-pastel-${(index % 4) + 1}`;
-          const card = document.createElement('div');
-          card.className = `album-card ${pastelClass}`;
-          
-          const art = document.createElement('div');
-          art.className = 'album-art';
-          art.style.backgroundImage = `url('${song.cover}')`;
-          
-          const info = document.createElement('div');
-          info.className = 'album-info';
-          
-          const title = document.createElement('h3');
-          title.className = 'title-sm';
-          title.textContent = song.title;
-          
-          const artist = document.createElement('a');
-          artist.className = 'artist-link label-caps';
-          artist.href = `/search.html?q=from:${encodeURIComponent(song.artist)}`;
-          artist.textContent = song.artist;
-          artist.addEventListener('click', (e) => e.stopPropagation());
-          
-          info.appendChild(title); info.appendChild(artist);
-          card.appendChild(art); card.appendChild(info);
-          
-          card.addEventListener('click', () => playQueue(songs, index, plugin.getInfo().id));
-          grid.appendChild(card);
-        });
+        if (songs && songs.length > 0) {
+          totalLoaded += songs.length;
+          songs.forEach((song, index) => {
+            const pastelClass = `bg-pastel-${(index % 4) + 1}`;
+            const card = document.createElement('div');
+            card.className = `album-card ${pastelClass}`;
+            
+            const art = document.createElement('div');
+            art.className = 'album-art';
+            art.style.backgroundImage = `url('${song.cover}')`;
+            
+            const info = document.createElement('div');
+            info.className = 'album-info';
+            
+            const title = document.createElement('h3');
+            title.className = 'title-sm';
+            title.textContent = song.title;
+            
+            const artist = document.createElement('a');
+            artist.className = 'artist-link label-caps';
+            artist.href = `/search.html?q=from:${encodeURIComponent(song.artist)}`;
+            artist.textContent = song.artist;
+            artist.addEventListener('click', (e) => e.stopPropagation());
+            
+            info.appendChild(title); info.appendChild(artist);
+            card.appendChild(art); card.appendChild(info);
+            
+            card.addEventListener('click', () => playQueue(songs, index, plugin.getInfo().id));
+            grid.appendChild(card);
+          });
+        }
       } catch (err) {}
     }
   }
+
+  if (totalLoaded === 0) {
+    loadOfflineFallback();
+  }
+}
+
+async function loadOfflineFallback() {
+  const cachedMeta = await getMetadataFromDB();
+  const grids = ['grid-foryou', 'grid-trending', 'grid-latest'];
+  let songs = cachedMeta.map(m => ({
+    id: m.id.split('/')[1],
+    title: m.title,
+    artist: m.artist,
+    cover: m.cover,
+    pluginId: m.pluginId
+  }));
+
+  if (songs.length === 0) return;
+
+  grids.forEach(gridId => {
+    const grid = document.getElementById(gridId);
+    if (!grid) return;
+    grid.innerHTML = '';
+    songs.forEach((song, index) => {
+      const pastelClass = `bg-pastel-${(index % 4) + 1}`;
+      const card = document.createElement('div');
+      card.className = `album-card ${pastelClass}`;
+      
+      const art = document.createElement('div');
+      art.className = 'album-art';
+      art.style.backgroundImage = `url('${song.cover}')`;
+      
+      const info = document.createElement('div');
+      info.className = 'album-info';
+      
+      const title = document.createElement('h3');
+      title.className = 'title-sm';
+      title.textContent = song.title;
+      
+      const artist = document.createElement('a');
+      artist.className = 'artist-link label-caps';
+      artist.href = `/search.html?q=from:${encodeURIComponent(song.artist)}`;
+      artist.textContent = song.artist;
+      artist.addEventListener('click', (e) => e.stopPropagation());
+      
+      info.appendChild(title); info.appendChild(artist);
+      card.appendChild(art); card.appendChild(info);
+      
+      card.addEventListener('click', () => playQueue(songs, index, song.pluginId));
+      grid.appendChild(card);
+    });
+  });
 }
 
 async function initSearchPage() {
@@ -226,11 +535,27 @@ async function loadDiscoverDefault() {
   resultsGrid.innerHTML = '';
   if (searchTitle) searchTitle.textContent = 'For You';
   
+  let totalLoaded = 0;
   for (const plugin of window.Noyza.extensions.plugins) {
     try {
       const songs = await plugin.browse('foryou');
-      renderSongsToGrid(songs, resultsGrid, plugin.getInfo().id);
+      if (songs && songs.length > 0) {
+        totalLoaded += songs.length;
+        renderSongsToGrid(songs, resultsGrid, plugin.getInfo().id);
+      }
     } catch (e) {}
+  }
+
+  if (totalLoaded === 0) {
+    const cachedMeta = await getMetadataFromDB();
+    let fallbackSongs = cachedMeta.map(m => ({
+      id: m.id.split('/')[1],
+      title: m.title,
+      artist: m.artist,
+      cover: m.cover,
+      pluginId: m.pluginId
+    }));
+    renderSongsToGrid(fallbackSongs, resultsGrid, fallbackSongs[0]?.pluginId);
   }
 }
 
@@ -373,6 +698,26 @@ function initSettingsPage() {
           alert("Failed to extract and save custom build.");
         }
       }
+    });
+  }
+
+  const inputOffline = document.getElementById('input-offline-cache');
+  if (inputOffline) {
+    inputOffline.value = accountData.offlineCache !== undefined ? accountData.offlineCache : 30;
+    inputOffline.addEventListener('change', (e) => {
+      accountData.offlineCache = Math.max(0, parseInt(e.target.value) || 0);
+      saveAccount();
+      enforceCacheLimits();
+    });
+  }
+
+  const inputTop = document.getElementById('input-top-cache');
+  if (inputTop) {
+    inputTop.value = accountData.topSongsCache !== undefined ? accountData.topSongsCache : 5;
+    inputTop.addEventListener('change', (e) => {
+      accountData.topSongsCache = Math.max(0, parseInt(e.target.value) || 0);
+      saveAccount();
+      enforceCacheLimits();
     });
   }
 }
@@ -587,13 +932,16 @@ async function restoreSession() {
         if (plugin) {
           const baseSong = currentQueue[queueIndex];
           try {
+            const trackIdGlobal = currentPluginId + '/' + baseSong.id;
+            const offlineDataUri = await window.Noyza.SongFetch(trackIdGlobal, "");
+            
             const fullSong = await plugin.getSong(baseSong.id);
             const audio = document.getElementById('audio-element');
             const titleDisplay = document.getElementById('player-title');
             const playerArt = document.getElementById('player-art');
             
             if (audio && titleDisplay) {
-              audio.src = fullSong.url;
+              audio.src = offlineDataUri || fullSong.url;
               titleDisplay.textContent = fullSong.title;
               if (playerArt) {
                 playerArt.src = fullSong.cover;
@@ -653,9 +1001,27 @@ async function loadAndPlayCurrent() {
   if (!plugin) return;
   
   const baseSong = currentQueue[queueIndex];
+  const trackIdGlobal = currentPluginId + '/' + baseSong.id;
+  
   try {
     setPlayIconState('loading');
-    const fullSong = await plugin.getSong(baseSong.id);
+    
+    let fullSong;
+    let offlineDataUri = await window.Noyza.SongFetch(trackIdGlobal, "");
+    
+    if (offlineDataUri) {
+      const cachedMetaList = await getMetadataFromDB();
+      const meta = cachedMetaList.find(m => m.id === trackIdGlobal);
+      fullSong = {
+        title: meta ? meta.title : baseSong.title,
+        cover: meta ? meta.cover : baseSong.cover,
+        url: offlineDataUri,
+        downloadProgress: 100
+      };
+    } else {
+      fullSong = await plugin.getSong(baseSong.id);
+    }
+    
     const audio = document.getElementById('audio-element');
     const titleDisplay = document.getElementById('player-title');
     const playerArt = document.getElementById('player-art');
@@ -671,6 +1037,24 @@ async function loadAndPlayCurrent() {
       if (dlFill) dlFill.style.width = `${fullSong.downloadProgress !== undefined ? fullSong.downloadProgress : 100}%`;
       
       audio.play().then(() => { isPlaying = true; savePlayerState(); }).catch(()=>{});
+    }
+
+    if (!offlineDataUri) {
+      window.Noyza.SongFetch(trackIdGlobal, fullSong.url);
+      await recordPlay(trackIdGlobal, {
+        title: fullSong.title,
+        artist: fullSong.artist || baseSong.artist,
+        cover: fullSong.cover,
+        pluginId: currentPluginId
+      });
+    }
+
+    if (queueIndex + 1 < currentQueue.length) {
+      const nextSong = currentQueue[queueIndex + 1];
+      const nextIdGlobal = currentPluginId + '/' + nextSong.id;
+      plugin.getSong(nextSong.id).then(nextFull => {
+        window.Noyza.SongFetch(nextIdGlobal, nextFull.url);
+      }).catch(()=>{});
     }
 
     clearTimeout(downloadTimer);

@@ -39,8 +39,8 @@
                 cover: "https://pooiod.github.io/ChMusicArchive/cover.webp",
                 source: "https://pooiod.github.io/ChMusicArchive",
                 originPage: null,
-                url: "https://pooiod.github.io/ChMusicArchive/music/" + song.file,
-                downloadProgress: 100,
+                url: Noyza.SongFetch("ArchiveCH/" +  song.title.replace(/\s+/g, "_").toLowerCase(), "https://pooiod.github.io/ChMusicArchive/music/" + song.file),
+                downloadProgress: Noyza.SongFetchProgress("ArchiveCH/" +  song.title.replace(/\s+/g, "_").toLowerCase(), "https://pooiod.github.io/ChMusicArchive/music/" + song.file),
             };
         }
 
