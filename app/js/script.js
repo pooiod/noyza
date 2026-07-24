@@ -218,6 +218,11 @@ window.Noyza.SongFetch = async function(id, url) {
   }
 
   if (fetchState) {
+    const targetBytes = Math.min(300000, fetchState.totalBytes ? fetchState.totalBytes * 0.05 : 300000);
+    while (fetchState.receivedBytes < targetBytes && !fetchState.completed) {
+      await new Promise(r => setTimeout(r, 100));
+    }
+
     const total = fetchState.totalBytes || fetchState.receivedBytes;
     const padded = new Uint8Array(total);
     let offset = 0;
@@ -373,6 +378,7 @@ async function initApp() {
   } else if (currentPath.includes('settings.html')) {
     initSettingsPage();
   } else {
+    await initRecentSection();
     initSections();
     checkForAppUpdates();
   }
@@ -398,6 +404,49 @@ function initUIBindings() {
     modeSelect.value = accountData.mode;
     themeSelect.addEventListener('change', (e) => { accountData.theme = e.target.value; saveAccount(); applyTheme(); });
     modeSelect.addEventListener('change', (e) => { accountData.mode = e.target.value; saveAccount(); applyTheme(); });
+  }
+}
+
+async function initRecentSection() {
+  const recentGrid = document.getElementById('grid-recent');
+  const recentSection = document.getElementById('section-recent');
+  if (!recentGrid || !recentSection) return;
+
+  const history = await getHistoryFromDB();
+  if (history.length === 0) {
+    recentSection.style.display = 'none';
+    return;
+  }
+
+  const sortedRecent = [...history].sort((a, b) => b.lastPlayed - a.lastPlayed).slice(0, 10);
+  const metadataList = await getMetadataFromDB();
+
+  const recentSongs = [];
+  sortedRecent.forEach(hist => {
+    const meta = metadataList.find(m => m.id === hist.id);
+    if (meta) {
+      recentSongs.push({
+        id: meta.id.split('/')[1],
+        title: meta.title,
+        artist: meta.artist,
+        cover: meta.cover,
+        pluginId: meta.pluginId
+      });
+    }
+  });
+
+  if (recentSongs.length > 0) {
+    recentSection.style.display = 'block';
+    recentGrid.innerHTML = '';
+    renderSongsToGrid(recentSongs, recentGrid, recentSongs[0].pluginId);
+    
+    const wrapper = recentGrid.parentElement;
+    const leftBtn = wrapper.querySelector('.btn-scroll-left');
+    const rightBtn = wrapper.querySelector('.btn-scroll-right');
+    if (leftBtn) leftBtn.addEventListener('click', () => recentGrid.scrollBy({ left: -300, behavior: 'smooth' }));
+    if (rightBtn) rightBtn.addEventListener('click', () => recentGrid.scrollBy({ left: 300, behavior: 'smooth' }));
+  } else {
+    recentSection.style.display = 'none';
   }
 }
 
@@ -1079,7 +1128,7 @@ async function loadAndPlayCurrent() {
 async function pollDownloadProgress() {
   if (queueIndex < 0 || queueIndex >= currentQueue.length) return;
   const plugin = getPlugin(currentPluginId);
-  if (!plugin || !plugin.updateTrack) return;
+  if (!plugin) return;
 
   const baseSong = currentQueue[queueIndex];
   const trackIdGlobal = currentPluginId + '/' + baseSong.id;
