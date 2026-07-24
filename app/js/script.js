@@ -6,7 +6,7 @@ window.Noyza = {
   }
 };
 
-var accountData = { theme: 'serenity', mode: 'system', volume: 1.0, updateChecking: true, offlineCache: 30, topSongsCache: 5 };
+var accountData = { theme: 'serenity', mode: 'system', volume: 1.0, updateChecking: true, offlineCache: 30, topSongsCache: 5, hoverPreCacheMax: 5 };
 var playerState = { queue: [], originalQueue: [], index: -1, autoplayMode: 'shuffle', pluginId: "", isPlaying: false, currentTime: 0 };
 var currentQueue = [];
 var originalQueue = [];
@@ -20,6 +20,7 @@ var lastSaveTime = 0;
 var db = null;
 var indexedDbKeys = new Set();
 var activeFetches = {};
+var hoverCachedIds = [];
 
 var modes = ['shuffle', 'repeat', 'loop1', 'noautoplay'];
 var modeIcons = {
@@ -260,13 +261,64 @@ async function enforceCacheLimits() {
   const sortedByRecent = [...history].sort((a, b) => b.lastPlayed - a.lastPlayed);
   const recentSongIds = new Set(sortedByRecent.slice(0, offlineLimit).map(h => h.id));
 
-  const keepIds = new Set([...topSongIds, ...recentSongIds]);
+  const keepIds = new Set([...topSongIds, ...recentSongIds, ...hoverCachedIds]);
 
   for (let key of indexedDbKeys) {
     if (!keepIds.has(key)) {
       await deleteSongFromDB(key);
       await deleteMetadataFromDB(key);
     }
+  }
+}
+
+function bindHoverPreCache(card, songId, pluginId) {
+  let hoverTimeout;
+  card.addEventListener('mouseenter', () => {
+    hoverTimeout = setTimeout(async () => {
+      const trackIdGlobal = pluginId + '/' + songId;
+      const progress = window.Noyza.SongFetchProgress(trackIdGlobal);
+      if (progress < 100) {
+        const plugin = getPlugin(pluginId);
+        if (plugin) {
+          try {
+            const fullSong = await plugin.getSong(songId);
+            await window.Noyza.SongFetch(trackIdGlobal, fullSong.url);
+            manageHoverCacheQueue(trackIdGlobal);
+          } catch (e) {}
+        }
+      }
+    }, 300);
+  });
+  card.addEventListener('mouseleave', () => {
+    clearTimeout(hoverTimeout);
+  });
+}
+
+function manageHoverCacheQueue(id) {
+  if (!hoverCachedIds.includes(id)) {
+    hoverCachedIds.push(id);
+  }
+  const max = accountData.hoverPreCacheMax !== undefined ? accountData.hoverPreCacheMax : 5;
+  while (hoverCachedIds.length > max) {
+    const oldestId = hoverCachedIds.shift();
+    safeDeleteHoverCache(oldestId);
+  }
+}
+
+async function safeDeleteHoverCache(id) {
+  const topLimit = accountData.topSongsCache || 5;
+  const offlineLimit = accountData.offlineCache || 30;
+
+  const history = await getHistoryFromDB();
+  const sortedByCount = [...history].sort((a, b) => b.count - a.count);
+  const topSongIds = new Set(sortedByCount.slice(0, topLimit).map(h => h.id));
+
+  const sortedByRecent = [...history].sort((a, b) => b.lastPlayed - a.lastPlayed);
+  const recentSongIds = new Set(sortedByRecent.slice(0, offlineLimit).map(h => h.id));
+
+  if (!topSongIds.has(id) && !recentSongIds.has(id)) {
+    await deleteSongFromDB(id);
+    await deleteMetadataFromDB(id);
   }
 }
 
@@ -481,6 +533,7 @@ async function initSections() {
             card.appendChild(art); card.appendChild(info);
             
             card.addEventListener('click', () => playQueue(songs, index, plugin.getInfo().id));
+            bindHoverPreCache(card, song.id, plugin.getInfo().id);
             grid.appendChild(card);
           });
         }
@@ -536,6 +589,7 @@ async function loadOfflineFallback() {
       card.appendChild(art); card.appendChild(info);
       
       card.addEventListener('click', () => playQueue(songs, index, song.pluginId));
+      bindHoverPreCache(card, song.id, song.pluginId);
       grid.appendChild(card);
     });
   });
@@ -625,6 +679,7 @@ function renderSongsToGrid(songs, grid, pluginId) {
     card.appendChild(art); card.appendChild(info);
     
     card.addEventListener('click', () => playQueue(songs, index, pluginId));
+    bindHoverPreCache(card, song.id, pluginId);
     grid.appendChild(card);
   });
 }
@@ -757,6 +812,15 @@ function initSettingsPage() {
       accountData.topSongsCache = Math.max(0, parseInt(e.target.value) || 0);
       saveAccount();
       enforceCacheLimits();
+    });
+  }
+
+  const inputHover = document.getElementById('input-hover-cache');
+  if (inputHover) {
+    inputHover.value = accountData.hoverPreCacheMax !== undefined ? accountData.hoverPreCacheMax : 5;
+    inputHover.addEventListener('change', (e) => {
+      accountData.hoverPreCacheMax = Math.max(0, parseInt(e.target.value) || 0);
+      saveAccount();
     });
   }
 }
