@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Noyza - Discover</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;600;700&family=Plus+Jakarta+Sans:wght@700;800&family=Space+Mono:wght@700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css">
+<link id="theme-stylesheet" rel="stylesheet" href="/themes/serenity.css">
+</head>
+<body data-theme-mode="light">
+<div class="app-layout">
+  <aside class="sidebar-container">
+    {{/components/sidebar.html}}
+  </aside>
+  <main class="main-content">
+    <header class="top-header">
+      <h1 class="headline-md">Discover</h1>
+    </header>
+    <div class="search-container">
+      <input type="text" id="search-input" class="custom-input" placeholder="Search tracks or from:artist...">
+      <button class="btn-primary" id="search-btn">Search</button>
+    </div>
+    <section class="library-section">
+      <h2 class="title-sm section-title" id="search-title">Results</h2>
+      <div class="music-grid" id="search-results"></div>
+    </section>
+  </main>
+  <footer class="player-container">
+    {{/components/player.html}}
+  </footer>
+</div>
+<script src="/js/script.js"></script>
+</body>
+</html>

@@ -1,7 +1,14 @@
+@font-face {
+  font-family: 'Sono Mono';
+  src: url('/assets/fonts/Sono-MONO.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
 :root {
   --font-display: 'Plus Jakarta Sans', sans-serif;
   --font-body: 'Hanken Grotesk', sans-serif;
-  --font-mono: 'Space Mono', monospace;
+  --font-mono: 'Sono Mono', monospace;
   --radius-sm: 0.25rem;
   --radius-default: 0.5rem;
   --radius-md: 0.75rem;
@@ -206,7 +213,7 @@ body.is-dragging {
 .bg-pastel-4 { background-color: var(--surface-container-highest); }
 
 .settings-section { display: flex; flex-direction: column; gap: var(--space-md); }
-.settings-card { border-radius: var(--radius-lg); padding: var(--space-lg); display: flex; flex-direction: column; gap: var(--space-lg); border: 1px solid var(--outline); max-width: 600px; }
+.settings-card { border-radius: var(--radius-lg); padding: var(--space-lg); display: flex; flex-direction: column; gap: var(--space-lg); border: 1px solid var(--outline); max-width: 650px; }
 .settings-group { display: flex; flex-direction: column; gap: var(--space-xs); }
 .custom-select { padding: var(--space-sm); border-radius: var(--radius-sm); border: 1px solid var(--outline); background: var(--surface); color: var(--on-surface); font-family: var(--font-body); font-size: 16px; cursor: pointer; }
 
@@ -224,6 +231,7 @@ body.is-dragging {
   align-items: center;
   gap: var(--space-md);
   height: 48px;
+  margin-top: 15px;
 }
 
 .btn-icon {
@@ -458,6 +466,50 @@ body.is-dragging {
   display: inline-flex; align-items: center; justify-content: center; cursor: pointer; transition: background-color 0.2s;
 }
 .btn-primary:hover { background-color: var(--primary-container); border-color: var(--primary-container); }
+
+.artist-link {
+  color: var(--primary);
+  text-decoration: none;
+  cursor: pointer;
+}
+.artist-link:hover {
+  text-decoration: underline;
+}
+
+.search-container {
+  display: flex;
+  gap: var(--space-md);
+  max-width: 600px;
+  margin-top: var(--space-sm);
+}
+
+.custom-input {
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--outline);
+  background: var(--surface);
+  color: var(--on-surface);
+  font-family: var(--font-body);
+  font-size: 16px;
+  flex: 1;
+}
+
+.plugins-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.plugin-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-sm) var(--space-md);
+  background: var(--surface-container-low);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--outline);
+}
 
 @media (max-width: 768px) {
   .app-layout { grid-template-columns: 1fr; grid-template-rows: 1fr 110px; grid-template-areas: "main" "player"; }

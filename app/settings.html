@@ -41,6 +41,21 @@
           </select>
         </div>
       </div>
+
+      <div class="settings-card bg-pastel-2">
+        <h2 class="title-sm">Plugins Manager</h2>
+        <div class="settings-group">
+          <label class="label-caps" for="plugin-url-input">Install Plugin from URL</label>
+          <div style="display: flex; gap: 10px;">
+            <input type="text" id="plugin-url-input" class="custom-input" placeholder="https://example.com/plugin.js" style="flex: 1;">
+            <button class="btn-primary" id="btn-install-plugin">Install</button>
+          </div>
+        </div>
+        <div class="settings-group" style="margin-top: 20px;">
+          <label class="label-caps">Installed Plugins</label>
+          <div id="installed-plugins-list" class="plugins-list"></div>
+        </div>
+      </div>
     </section>
   </main>
   <footer class="player-container">
