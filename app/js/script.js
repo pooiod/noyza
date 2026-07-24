@@ -211,6 +211,7 @@ window.Noyza.SongFetch = async function(id, url) {
 
   let fetchState = activeFetches[id];
   if (!fetchState) {
+    if (!url) return "";
     fetchSongStream(id, url);
     await new Promise(r => setTimeout(r, 100));
     fetchState = activeFetches[id];
@@ -257,8 +258,8 @@ async function recordPlay(id, songMeta) {
 }
 
 async function enforceCacheLimits() {
-  const topLimit = accountData.topSongsCache || 5;
-  const offlineLimit = accountData.offlineCache || 30;
+  const topLimit = accountData.topSongsCache !== undefined ? accountData.topSongsCache : 5;
+  const offlineLimit = accountData.offlineCache !== undefined ? accountData.offlineCache : 30;
 
   const history = await getHistoryFromDB();
   const sortedByCount = [...history].sort((a, b) => b.count - a.count);
@@ -555,7 +556,9 @@ async function loadDiscoverDefault() {
       cover: m.cover,
       pluginId: m.pluginId
     }));
-    renderSongsToGrid(fallbackSongs, resultsGrid, fallbackSongs[0]?.pluginId);
+    if (fallbackSongs.length > 0) {
+      renderSongsToGrid(fallbackSongs, resultsGrid, fallbackSongs[0].pluginId);
+    }
   }
 }
 
@@ -933,15 +936,23 @@ async function restoreSession() {
           const baseSong = currentQueue[queueIndex];
           try {
             const trackIdGlobal = currentPluginId + '/' + baseSong.id;
-            const offlineDataUri = await window.Noyza.SongFetch(trackIdGlobal, "");
-            
             const fullSong = await plugin.getSong(baseSong.id);
+            const dlProgress = window.Noyza.SongFetchProgress(trackIdGlobal);
+            
+            let targetUrl = fullSong.url;
+            if (dlProgress === 100) {
+              const offlineDataUri = await window.Noyza.SongFetch(trackIdGlobal, "");
+              if (offlineDataUri) targetUrl = offlineDataUri;
+            } else {
+              window.Noyza.SongFetch(trackIdGlobal, fullSong.url);
+            }
+            
             const audio = document.getElementById('audio-element');
             const titleDisplay = document.getElementById('player-title');
             const playerArt = document.getElementById('player-art');
             
             if (audio && titleDisplay) {
-              audio.src = offlineDataUri || fullSong.url;
+              audio.src = targetUrl;
               titleDisplay.textContent = fullSong.title;
               if (playerArt) {
                 playerArt.src = fullSong.cover;
@@ -1006,20 +1017,15 @@ async function loadAndPlayCurrent() {
   try {
     setPlayIconState('loading');
     
-    let fullSong;
-    let offlineDataUri = await window.Noyza.SongFetch(trackIdGlobal, "");
+    const fullSong = await plugin.getSong(baseSong.id);
+    const dlProgress = window.Noyza.SongFetchProgress(trackIdGlobal);
     
-    if (offlineDataUri) {
-      const cachedMetaList = await getMetadataFromDB();
-      const meta = cachedMetaList.find(m => m.id === trackIdGlobal);
-      fullSong = {
-        title: meta ? meta.title : baseSong.title,
-        cover: meta ? meta.cover : baseSong.cover,
-        url: offlineDataUri,
-        downloadProgress: 100
-      };
+    let targetUrl = fullSong.url;
+    if (dlProgress === 100) {
+      const offlineDataUri = await window.Noyza.SongFetch(trackIdGlobal, "");
+      if (offlineDataUri) targetUrl = offlineDataUri;
     } else {
-      fullSong = await plugin.getSong(baseSong.id);
+      window.Noyza.SongFetch(trackIdGlobal, fullSong.url);
     }
     
     const audio = document.getElementById('audio-element');
@@ -1028,32 +1034,37 @@ async function loadAndPlayCurrent() {
     const dlFill = document.getElementById('download-fill');
     
     if (audio && titleDisplay) {
-      audio.src = fullSong.url;
+      audio.src = targetUrl;
       titleDisplay.textContent = fullSong.title;
       if (playerArt) {
         playerArt.src = fullSong.cover;
         playerArt.style.display = 'block';
       }
-      if (dlFill) dlFill.style.width = `${fullSong.downloadProgress !== undefined ? fullSong.downloadProgress : 100}%`;
+      if (dlFill) dlFill.style.width = `${dlProgress}%`;
       
-      audio.play().then(() => { isPlaying = true; savePlayerState(); }).catch(()=>{});
-    }
-
-    if (!offlineDataUri) {
-      window.Noyza.SongFetch(trackIdGlobal, fullSong.url);
-      await recordPlay(trackIdGlobal, {
-        title: fullSong.title,
-        artist: fullSong.artist || baseSong.artist,
-        cover: fullSong.cover,
-        pluginId: currentPluginId
+      audio.play().then(() => { 
+        isPlaying = true; 
+        savePlayerState(); 
+      }).catch((err) => {
+        isPlaying = false;
+        setPlayIconState('paused');
       });
     }
+
+    await recordPlay(trackIdGlobal, {
+      title: fullSong.title,
+      artist: fullSong.artist || baseSong.artist,
+      cover: fullSong.cover,
+      pluginId: currentPluginId
+    });
 
     if (queueIndex + 1 < currentQueue.length) {
       const nextSong = currentQueue[queueIndex + 1];
       const nextIdGlobal = currentPluginId + '/' + nextSong.id;
       plugin.getSong(nextSong.id).then(nextFull => {
-        window.Noyza.SongFetch(nextIdGlobal, nextFull.url);
+        if (window.Noyza.SongFetchProgress(nextIdGlobal) < 100) {
+          window.Noyza.SongFetch(nextIdGlobal, nextFull.url);
+        }
       }).catch(()=>{});
     }
 
@@ -1071,11 +1082,20 @@ async function pollDownloadProgress() {
   if (!plugin || !plugin.updateTrack) return;
 
   const baseSong = currentQueue[queueIndex];
+  const trackIdGlobal = currentPluginId + '/' + baseSong.id;
+  
   try {
-    const updated = await plugin.updateTrack(baseSong.id);
-    const dlProgress = updated.downloadProgress !== undefined ? updated.downloadProgress : 100;
+    let dlProgress = window.Noyza.SongFetchProgress(trackIdGlobal);
+    if (plugin.updateTrack) {
+      const updated = await plugin.updateTrack(baseSong.id);
+      if (updated && updated.downloadProgress !== undefined && updated.downloadProgress < 100) {
+        dlProgress = Math.max(dlProgress, updated.downloadProgress);
+      }
+    }
+    
     const dlFill = document.getElementById('download-fill');
     if (dlFill) dlFill.style.width = `${dlProgress}%`;
+    
     if (dlProgress < 100) {
       clearTimeout(downloadTimer);
       downloadTimer = setTimeout(pollDownloadProgress, 1000);
@@ -1125,8 +1145,13 @@ function initPlayer() {
 
   playBtn.addEventListener('click', () => {
     if (audio.src) {
-      if (isPlaying) { audio.pause(); } else { audio.play(); }
+      if (isPlaying) { audio.pause(); } else { audio.play().catch(()=>{}); }
     }
+  });
+
+  audio.addEventListener('error', () => {
+    isPlaying = false;
+    setPlayIconState('paused');
   });
 
   audio.addEventListener('loadstart', () => { if (audio.src) setPlayIconState('loading'); });
@@ -1152,7 +1177,7 @@ function initPlayer() {
   audio.addEventListener('ended', () => {
     if (autoplayMode === 'loop1') {
       audio.currentTime = 0;
-      audio.play();
+      audio.play().catch(()=>{});
     } else if (autoplayMode === 'noautoplay') {
       isPlaying = false;
       setPlayIconState('paused');
