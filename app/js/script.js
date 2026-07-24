@@ -985,8 +985,18 @@ async function restoreSession() {
           const baseSong = currentQueue[queueIndex];
           try {
             const trackIdGlobal = currentPluginId + '/' + baseSong.id;
+            const dlProgress = window.Noyza.SongFetchProgress(trackIdGlobal);
             const fullSong = await plugin.getSong(baseSong.id);
-            const targetUrl = await window.Noyza.SongFetch(trackIdGlobal, fullSong.url);
+            
+            let targetUrl = fullSong.url;
+            if (dlProgress === 100) {
+              const offlineDataUri = await window.Noyza.SongFetch(trackIdGlobal, "");
+              if (offlineDataUri) targetUrl = offlineDataUri;
+            } else {
+              setTimeout(() => {
+                window.Noyza.SongFetch(trackIdGlobal, fullSong.url);
+              }, 2000);
+            }
             
             const audio = document.getElementById('audio-element');
             const titleDisplay = document.getElementById('player-title');
@@ -1059,7 +1069,17 @@ async function loadAndPlayCurrent() {
     setPlayIconState('loading');
     
     const fullSong = await plugin.getSong(baseSong.id);
-    const targetUrl = await window.Noyza.SongFetch(trackIdGlobal, fullSong.url);
+    const dlProgress = window.Noyza.SongFetchProgress(trackIdGlobal);
+    
+    let targetUrl = fullSong.url;
+    if (dlProgress === 100) {
+      const offlineDataUri = await window.Noyza.SongFetch(trackIdGlobal, "");
+      if (offlineDataUri) targetUrl = offlineDataUri;
+    } else {
+      setTimeout(() => {
+        window.Noyza.SongFetch(trackIdGlobal, fullSong.url);
+      }, 2000);
+    }
     
     const audio = document.getElementById('audio-element');
     const titleDisplay = document.getElementById('player-title');
@@ -1073,8 +1093,6 @@ async function loadAndPlayCurrent() {
         playerArt.src = fullSong.cover;
         playerArt.style.display = 'block';
       }
-      
-      const dlProgress = window.Noyza.SongFetchProgress(trackIdGlobal);
       if (dlFill) dlFill.style.width = `${dlProgress}%`;
       
       audio.play().then(() => { 
@@ -1098,7 +1116,9 @@ async function loadAndPlayCurrent() {
       const nextIdGlobal = currentPluginId + '/' + nextSong.id;
       plugin.getSong(nextSong.id).then(nextFull => {
         if (window.Noyza.SongFetchProgress(nextIdGlobal) < 100) {
-          window.Noyza.SongFetch(nextIdGlobal, nextFull.url);
+          setTimeout(() => {
+            window.Noyza.SongFetch(nextIdGlobal, nextFull.url);
+          }, 3000);
         }
       }).catch(()=>{});
     }
